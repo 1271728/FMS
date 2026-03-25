@@ -120,7 +120,8 @@
         <div class="section-head mt12">
           <div>
             <div class="section-title">报销明细</div>
-            <div class="section-tip">仅差旅类科目支持补助计算：总额 = 基础金额 + 差旅天数 × 每日补助；其他科目仅填写基础金额。</div>
+            <div class="section-tip" v-if="hasTravelSubsidyRows">差旅类科目支持补助计算：总额 = 基础金额 + 差旅天数 × 每日补助。</div>
+            <div class="section-tip" v-else>当前未选择差旅类科目，仅需填写基础金额。</div>
           </div>
           <el-button type="primary" plain @click="addItem">新增明细</el-button>
         </div>
@@ -147,7 +148,7 @@
               <el-input-number v-model="row.baseAmount" :min="0" :precision="2" :step="100" style="width:100%" @change="recalcItem(row)" />
             </template>
           </el-table-column>
-          <el-table-column label="差旅天数" width="120">
+          <el-table-column v-if="hasTravelSubsidyRows" label="差旅天数" width="120">
             <template #default="{ row }">
               <el-input-number
                 v-if="isTravelSubject(row.subjectId)"
@@ -161,7 +162,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="每日补助" width="140">
+          <el-table-column v-if="hasTravelSubsidyRows" label="每日补助" width="140">
             <template #default="{ row }">
               <el-input-number
                 v-if="isTravelSubject(row.subjectId)"
@@ -175,7 +176,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="补助金额" width="130">
+          <el-table-column v-if="hasTravelSubsidyRows" label="补助金额" width="130">
             <template #default="{ row }">{{ isTravelSubject(row.subjectId) ? money(row.subsidyAmount) : '-' }}</template>
           </el-table-column>
           <el-table-column label="总金额" width="130">
@@ -336,6 +337,7 @@ const editDialog = reactive({
 const detailDrawer = reactive({ visible: false, data: null as ReimburseDetailVO | null });
 const auditDialog = reactive({ visible: false, row: null as ReimburseVO | null, action: 'pass' as 'pass' | 'reject', comment: '' });
 const formTotal = computed(() => editDialog.form.items.reduce((sum, item) => sum + Number(item.amount || 0), 0));
+const hasTravelSubsidyRows = computed(() => editDialog.form.items.some((item) => isTravelSubject(item.subjectId)));
 
 function money(v?: number | null) {
   const n = Number(v || 0);
