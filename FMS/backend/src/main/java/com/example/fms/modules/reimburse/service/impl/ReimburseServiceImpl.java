@@ -201,19 +201,23 @@ public class ReimburseServiceImpl implements ReimburseService {
                 throw BizException.badRequest("预算余额不足：" + pb.getSubjectName());
             }
         }
+        Integer toStatus = (project.getPrincipalUserId() != null && !project.getPrincipalUserId().equals(entity.getApplicantUserId()))
+                ? ReimburseStatus.PENDING_PI : ReimburseStatus.PENDING_UNIT;
+        String toNode = toStatus == ReimburseStatus.PENDING_PI ? WfNodeCodes.PI_AUDIT : WfNodeCodes.UNIT_AUDIT;
+        if (reimburseMapper.markSubmittedIfStatus(entity.getId(), entity.getStatus(), toStatus, toNode) <= 0) {
+            throw BizException.conflict("报销单状态已变化，请刷新后重试");
+        }
         for (Map.Entry<Long, BigDecimal> e : amounts.entrySet()) {
             if (projectBudgetMapper.freeze(project.getId(), e.getKey(), e.getValue()) <= 0) {
                 throw BizException.badRequest("冻结预算失败，可能余额不足");
             }
         }
         wfTaskMapper.cancelTodoByBiz(WfBizTypes.REIMB, entity.getId(), "RE-SUBMIT", cu.getUser().getId());
-        if (project.getPrincipalUserId() != null && !project.getPrincipalUserId().equals(entity.getApplicantUserId())) {
-            reimburseMapper.markSubmitted(entity.getId(), ReimburseStatus.PENDING_PI, WfNodeCodes.PI_AUDIT);
+        if (toStatus == ReimburseStatus.PENDING_PI) {
             wfTaskMapper.insert(WfBizTypes.REIMB, entity.getId(), WfNodeCodes.PI_AUDIT, "报销单待项目负责人审批", "PI", project.getPrincipalUserId(), entity.getApplicantUserId(), entity.getUnitId());
             msgInboxMapper.insert(project.getPrincipalUserId(), "PI_TODO", "成员报销待审批", "成员报销单 " + entity.getReimburseNo() + " 已提交，请组长先行审批。", WfBizTypes.REIMB, entity.getId());
             reimburseAuditLogMapper.insert(entity.getId(), "提交报销审批", entity.getStatus(), ReimburseStatus.PENDING_PI, cu.getUser().getId(), null);
         } else {
-            reimburseMapper.markSubmitted(entity.getId(), ReimburseStatus.PENDING_UNIT, WfNodeCodes.UNIT_AUDIT);
             wfTaskMapper.insert(WfBizTypes.REIMB, entity.getId(), WfNodeCodes.UNIT_AUDIT, "报销单待单位审核", "UNIT_ADMIN", null, entity.getApplicantUserId(), entity.getUnitId());
             reimburseAuditLogMapper.insert(entity.getId(), "提交报销审批", entity.getStatus(), ReimburseStatus.PENDING_UNIT, cu.getUser().getId(), null);
         }
@@ -225,9 +229,11 @@ public class ReimburseServiceImpl implements ReimburseService {
         UserSupport.CurrentUser cu = userSupport.currentUser();
         ReimburseEntity entity = requireReimburse(req.getId());
         if (!canWithdraw(entity.getApplicantUserId(), entity.getStatus(), cu)) throw BizException.forbidden("当前状态不可撤销");
+        if (reimburseMapper.updateStatusIfStatus(entity.getId(), entity.getStatus(), ReimburseStatus.WITHDRAWN, WfNodeCodes.WITHDRAWN, null) <= 0) {
+            throw BizException.conflict("报销单状态已变化，请刷新后重试");
+        }
         releaseFrozen(requireProject(entity.getProjectId()).getId(), sumBySubject(reimburseItemMapper.selectByReimburseId(entity.getId())));
         wfTaskMapper.cancelTodoByBiz(WfBizTypes.REIMB, entity.getId(), "WITHDRAW", cu.getUser().getId());
-        reimburseMapper.updateStatus(entity.getId(), ReimburseStatus.WITHDRAWN, WfNodeCodes.WITHDRAWN, null);
         reimburseAuditLogMapper.insert(entity.getId(), "撤销报销单", entity.getStatus(), ReimburseStatus.WITHDRAWN, cu.getUser().getId(), null);
     }
 
@@ -256,7 +262,9 @@ public class ReimburseServiceImpl implements ReimburseService {
             if (!canLeaderAudit(entity.getApplicantUserId(), project.getPrincipalUserId(), entity.getStatus(), cu)) throw BizException.forbidden("无权执行项目负责人审批");
             if (wfTaskMapper.countTodo(WfBizTypes.REIMB, bizId, WfNodeCodes.PI_AUDIT) <= 0) throw BizException.conflict("当前待办已不存在");
             wfTaskMapper.markDone(WfBizTypes.REIMB, bizId, WfNodeCodes.PI_AUDIT, "APPROVE", cu.getUser().getId());
-            reimburseMapper.updateStatus(entity.getId(), ReimburseStatus.PENDING_UNIT, WfNodeCodes.UNIT_AUDIT, blankToNull(comment));
+            if (reimburseMapper.updateStatusIfStatus(entity.getId(), entity.getStatus(), ReimburseStatus.PENDING_UNIT, WfNodeCodes.UNIT_AUDIT, blankToNull(comment)) <= 0) {
+                throw BizException.conflict("报销单状态已变化，请刷新后重试");
+            }
             wfTaskMapper.insert(WfBizTypes.REIMB, entity.getId(), WfNodeCodes.UNIT_AUDIT, "报销单待单位审核", "UNIT_ADMIN", null, entity.getApplicantUserId(), entity.getUnitId());
             reimburseAuditLogMapper.insert(entity.getId(), "组长审批通过", entity.getStatus(), ReimburseStatus.PENDING_UNIT, cu.getUser().getId(), blankToNull(comment));
             msgInboxMapper.insert(entity.getApplicantUserId(), "LEADER_PASS", "组长审批通过", "报销单 " + entity.getReimburseNo() + " 已通过组长审批，进入单位审核。", WfBizTypes.REIMB, bizId);
@@ -266,7 +274,9 @@ public class ReimburseServiceImpl implements ReimburseService {
             if (!canUnitAudit(entity.getUnitId(), entity.getStatus(), cu)) throw BizException.forbidden("无权执行二级单位审批");
             if (wfTaskMapper.countTodo(WfBizTypes.REIMB, bizId, WfNodeCodes.UNIT_AUDIT) <= 0) throw BizException.conflict("当前待办已不存在");
             wfTaskMapper.markDone(WfBizTypes.REIMB, bizId, WfNodeCodes.UNIT_AUDIT, "APPROVE", cu.getUser().getId());
-            reimburseMapper.updateStatus(entity.getId(), ReimburseStatus.PENDING_FINANCE, WfNodeCodes.FIN_REVIEW, blankToNull(comment));
+            if (reimburseMapper.updateStatusIfStatus(entity.getId(), entity.getStatus(), ReimburseStatus.PENDING_FINANCE, WfNodeCodes.FIN_REVIEW, blankToNull(comment)) <= 0) {
+                throw BizException.conflict("报销单状态已变化，请刷新后重试");
+            }
             wfTaskMapper.insert(WfBizTypes.REIMB, entity.getId(), WfNodeCodes.FIN_REVIEW, "报销单待财务复核", "FINANCE", null, entity.getApplicantUserId(), entity.getUnitId());
             reimburseAuditLogMapper.insert(entity.getId(), "二级单位审批通过", entity.getStatus(), ReimburseStatus.PENDING_FINANCE, cu.getUser().getId(), blankToNull(comment));
             return;
@@ -275,9 +285,11 @@ public class ReimburseServiceImpl implements ReimburseService {
             if (!canFinanceAudit(entity.getStatus(), cu)) throw BizException.forbidden("无权执行财务处审批");
             if (wfTaskMapper.countTodo(WfBizTypes.REIMB, bizId, WfNodeCodes.FIN_REVIEW) <= 0) throw BizException.conflict("当前待办已不存在");
             Long projectId = project.getId();
+            if (reimburseMapper.updateStatusIfStatus(entity.getId(), entity.getStatus(), ReimburseStatus.WAIT_PAY, WfNodeCodes.PAY_ARCHIVE, blankToNull(comment)) <= 0) {
+                throw BizException.conflict("报销单状态已变化，请刷新后重试");
+            }
             consumeFrozen(projectId, amounts);
             wfTaskMapper.markDone(WfBizTypes.REIMB, bizId, WfNodeCodes.FIN_REVIEW, "APPROVE", cu.getUser().getId());
-            reimburseMapper.updateStatus(entity.getId(), ReimburseStatus.WAIT_PAY, WfNodeCodes.PAY_ARCHIVE, blankToNull(comment));
             wfTaskMapper.insert(WfBizTypes.REIMB, entity.getId(), WfNodeCodes.PAY_ARCHIVE, "报销单待支付归档", "FINANCE", null, entity.getApplicantUserId(), entity.getUnitId());
             reimburseAuditLogMapper.insert(entity.getId(), "财务处审批通过", entity.getStatus(), ReimburseStatus.WAIT_PAY, cu.getUser().getId(), blankToNull(comment));
             msgInboxMapper.insert(entity.getApplicantUserId(), "FIN_PASS", "报销单已通过财务复核", "报销单 " + entity.getReimburseNo() + " 已进入支付归档环节。", WfBizTypes.REIMB, bizId);
@@ -303,9 +315,11 @@ public class ReimburseServiceImpl implements ReimburseService {
         }
         if (wfTaskMapper.countTodo(WfBizTypes.REIMB, bizId, upper(nodeCode)) <= 0) throw BizException.conflict("当前待办已不存在");
         Map<Long, BigDecimal> amounts = sumBySubject(reimburseItemMapper.selectByReimburseId(entity.getId()));
+        if (reimburseMapper.updateStatusIfStatus(entity.getId(), entity.getStatus(), ReimburseStatus.REJECTED, WfNodeCodes.REJECTED, comment.trim()) <= 0) {
+            throw BizException.conflict("报销单状态已变化，请刷新后重试");
+        }
         releaseFrozen(project.getId(), amounts);
         wfTaskMapper.cancelTodoByBiz(WfBizTypes.REIMB, bizId, "REJECT", cu.getUser().getId());
-        reimburseMapper.updateStatus(entity.getId(), ReimburseStatus.REJECTED, WfNodeCodes.REJECTED, comment.trim());
         reimburseAuditLogMapper.insert(entity.getId(), "驳回报销单", entity.getStatus(), ReimburseStatus.REJECTED, cu.getUser().getId(), comment.trim());
         msgInboxMapper.insert(entity.getApplicantUserId(), "REJECT", "报销单被驳回", "报销单 " + entity.getReimburseNo() + " 已被驳回：" + comment.trim(), WfBizTypes.REIMB, bizId);
     }

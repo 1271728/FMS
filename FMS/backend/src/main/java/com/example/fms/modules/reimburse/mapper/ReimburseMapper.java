@@ -110,6 +110,13 @@ public interface ReimburseMapper {
     @Update("UPDATE rf_reimb SET project_id = #{projectId}, unit_id = #{unitId}, title = #{title}, total_amount = #{totalAmount}, updated_at = NOW() WHERE id = #{id}")
     int updateDraft(ReimburseEntity entity);
 
+    @Update("UPDATE rf_reimb SET status = #{toStatus}, submitted_at = NOW(), current_node = #{currentNode}, last_comment = NULL, updated_at = NOW() WHERE id = #{id} AND status = #{fromStatus}")
+    int markSubmittedIfStatus(@Param("id") Long id, @Param("fromStatus") Integer fromStatus, @Param("toStatus") Integer toStatus, @Param("currentNode") String currentNode);
+
+    @Update("UPDATE rf_reimb SET status = #{toStatus}, current_node = #{currentNode}, last_comment = #{comment}, updated_at = NOW() WHERE id = #{id} AND status = #{fromStatus}")
+    int updateStatusIfStatus(@Param("id") Long id, @Param("fromStatus") Integer fromStatus, @Param("toStatus") Integer toStatus, @Param("currentNode") String currentNode, @Param("comment") String comment);
+
+
     @Update("UPDATE rf_reimb SET status = #{status}, submitted_at = NOW(), current_node = #{currentNode}, last_comment = NULL, updated_at = NOW() WHERE id = #{id}")
     int markSubmitted(@Param("id") Long id, @Param("status") Integer status, @Param("currentNode") String currentNode);
 
