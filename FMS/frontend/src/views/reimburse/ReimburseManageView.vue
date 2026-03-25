@@ -120,14 +120,14 @@
         <div class="section-head mt12">
           <div>
             <div class="section-title">报销明细</div>
-            <div class="section-tip">差旅费支持补助计算：总额 = 基础金额 + 差旅天数 × 每日补助。</div>
+            <div class="section-tip">仅差旅类科目支持补助计算：总额 = 基础金额 + 差旅天数 × 每日补助；其他科目仅填写基础金额。</div>
           </div>
           <el-button type="primary" plain @click="addItem">新增明细</el-button>
         </div>
         <el-table :data="editDialog.form.items" border>
           <el-table-column label="预算科目" min-width="180">
             <template #default="{ row }">
-              <el-select v-model="row.subjectId" filterable placeholder="选择预算科目" style="width:100%">
+              <el-select v-model="row.subjectId" filterable placeholder="选择预算科目" style="width:100%" @change="handleSubjectChange(row)">
                 <el-option v-for="b in budgetOptions" :key="b.subjectId" :label="`${b.subjectCode}｜${b.subjectName}（可用${money(b.availableAmount)}）`" :value="b.subjectId" />
               </el-select>
             </template>
@@ -149,16 +149,34 @@
           </el-table-column>
           <el-table-column label="差旅天数" width="120">
             <template #default="{ row }">
-              <el-input-number v-model="row.travelDays" :min="0" :precision="0" :step="1" style="width:100%" @change="recalcItem(row)" />
+              <el-input-number
+                v-if="isTravelSubject(row.subjectId)"
+                v-model="row.travelDays"
+                :min="0"
+                :precision="0"
+                :step="1"
+                style="width:100%"
+                @change="recalcItem(row)"
+              />
+              <span v-else>-</span>
             </template>
           </el-table-column>
           <el-table-column label="每日补助" width="140">
             <template #default="{ row }">
-              <el-input-number v-model="row.subsidyPerDay" :min="0" :precision="2" :step="10" style="width:100%" @change="recalcItem(row)" />
+              <el-input-number
+                v-if="isTravelSubject(row.subjectId)"
+                v-model="row.subsidyPerDay"
+                :min="0"
+                :precision="2"
+                :step="10"
+                style="width:100%"
+                @change="recalcItem(row)"
+              />
+              <span v-else>-</span>
             </template>
           </el-table-column>
           <el-table-column label="补助金额" width="130">
-            <template #default="{ row }">{{ money(row.subsidyAmount) }}</template>
+            <template #default="{ row }">{{ isTravelSubject(row.subjectId) ? money(row.subsidyAmount) : '-' }}</template>
           </el-table-column>
           <el-table-column label="总金额" width="130">
             <template #default="{ row }">{{ money(row.amount) }}</template>
@@ -344,11 +362,26 @@ function auditStageText(row: ReimburseVO | null) {
 }
 function recalcItem(row: ReimburseItemReq) {
   const base = Number(row.baseAmount || 0);
+  if (!isTravelSubject(row.subjectId)) {
+    row.travelDays = null;
+    row.subsidyPerDay = null;
+    row.subsidyAmount = null;
+    row.amount = Number(base.toFixed(2));
+    return;
+  }
   const days = Number(row.travelDays || 0);
   const perDay = Number(row.subsidyPerDay || 0);
   const subsidy = days > 0 && perDay > 0 ? Number((days * perDay).toFixed(2)) : 0;
   row.subsidyAmount = subsidy || null;
   row.amount = Number((base + subsidy).toFixed(2));
+}
+function isTravelSubject(subjectId?: number | null) {
+  if (!subjectId) return false;
+  const subjectCode = (budgetOptions.value.find((item) => item.subjectId === subjectId)?.subjectCode || '').toUpperCase();
+  return subjectCode === 'TRAVEL' || subjectCode.startsWith('TRAVEL_');
+}
+function handleSubjectChange(row: ReimburseItemReq) {
+  recalcItem(row);
 }
 
 async function loadProjects() {
@@ -406,6 +439,7 @@ async function openEdit(row: ReimburseVO) {
   })) : [blankItem()];
   editDialog.visible = true;
   await handleFormProjectChange();
+  editDialog.form.items.forEach(recalcItem);
 }
 async function openDetail(row: ReimburseVO) { detailDrawer.data = await apiReimburseDetail(row.id); detailDrawer.visible = true; }
 function openAudit(row: ReimburseVO) { auditDialog.row = row; auditDialog.action = 'pass'; auditDialog.comment = ''; auditDialog.visible = true; }
