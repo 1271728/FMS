@@ -1,5 +1,7 @@
 package com.example.fms.common.api;
 
+import com.example.fms.common.logging.TraceIdSupport;
+
 /**
  * 统一返回结构
  */
@@ -9,6 +11,7 @@ public class ApiResponse<T> {
     private boolean success;
     private String message;
     private T data;
+    private String traceId;
 
     public ApiResponse() {}
 
@@ -17,6 +20,7 @@ public class ApiResponse<T> {
         this.success = success;
         this.message = message;
         this.data = data;
+        this.traceId = TraceIdSupport.currentTraceId();
     }
 
     public static <T> ApiResponse<T> ok(T data) {
@@ -38,4 +42,7 @@ public class ApiResponse<T> {
 
     public T getData() { return data; }
     public void setData(T data) { this.data = data; }
+
+    public String getTraceId() { return traceId; }
+    public void setTraceId(String traceId) { this.traceId = traceId; }
 }

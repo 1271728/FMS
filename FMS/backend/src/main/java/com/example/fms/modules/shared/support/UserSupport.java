@@ -9,6 +9,8 @@ import com.example.fms.modules.project.dto.ProjectEntity;
 import com.example.fms.modules.project.mapper.ProjectMemberMapper;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @Component
@@ -29,7 +31,18 @@ public class UserSupport {
         Long userId = StpUtil.getLoginIdAsLong();
         SysUser user = sysUserMapper.selectById(userId);
         if (user == null) throw BizException.unauthorized("用户不存在");
-        return new CurrentUser(user, rbacMapper.selectRoleCodesByUserId(userId));
+        return new CurrentUser(user, normalizeRoleCodes(rbacMapper.selectRoleCodesByUserId(userId)));
+    }
+
+    public List<String> normalizeRoleCodes(List<String> roles) {
+        LinkedHashSet<String> normalized = new LinkedHashSet<String>();
+        if (roles == null) return new ArrayList<String>(normalized);
+        for (String role : roles) {
+            if (role == null) continue;
+            String v = role.trim().toUpperCase();
+            if (!v.isEmpty()) normalized.add(v);
+        }
+        return new ArrayList<String>(normalized);
     }
 
     public boolean hasAdminRole(List<String> roles) { return hasAnyRole(roles, "ADMIN"); }
@@ -39,14 +52,29 @@ public class UserSupport {
 
     public boolean hasAnyRole(List<String> roles, String... candidates) {
         if (roles == null || roles.isEmpty()) return false;
-        for (String role : roles) {
-            if (role == null) continue;
-            String v = role.trim().toUpperCase();
+        List<String> normalized = normalizeRoleCodes(roles);
+        for (String role : normalized) {
             for (String c : candidates) {
-                if (v.equals(c)) return true;
+                if (role.equals(c)) return true;
             }
         }
         return false;
+    }
+
+    public List<String> accessCodes(List<String> roles) {
+        List<String> normalized = normalizeRoleCodes(roles);
+        LinkedHashSet<String> codes = new LinkedHashSet<String>();
+        if (hasAnyRole(normalized, "PI", "ADMIN", "UNIT_ADMIN", "FINANCE")) {
+            codes.add("HOME");
+            codes.add("PROJECT_MANAGE");
+            codes.add("BUDGET_OVERVIEW");
+            codes.add("BUDGET_ADJUST");
+            codes.add("REIMBURSE_MANAGE");
+            codes.add("MSG_CENTER");
+        }
+        if (hasAdminRole(normalized)) codes.add("ADMIN_USERS");
+        if (hasAnyRole(normalized, "ADMIN", "UNIT_ADMIN", "FINANCE")) codes.add("WORKFLOW_CENTER");
+        return new ArrayList<String>(codes);
     }
 
     public boolean canReadProject(ProjectEntity project, CurrentUser cu) {

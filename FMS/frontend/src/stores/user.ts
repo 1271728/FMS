@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { apiLogin, apiMe, type MeResp } from "@/api/auth";
 import { clearToken, getToken, setToken } from "@/api/http";
+import { hasAccess, normalizeRoleCode, type AccessKey } from "@/constants/access";
 
 const ROLE_ALIASES: Record<string, string[]> = {
   ADMIN: ["ADMIN"],
@@ -86,11 +87,15 @@ export const useUserStore = defineStore("user", {
       clearToken();
     },
     hasRole(role: string) {
-      return (this.me?.roles || []).includes(role);
+      const normalized = normalizeRoleCode(role || "");
+      if (!normalized) return false;
+      return (this.me?.roles || []).includes(normalized);
     },
     hasAnyRole(roles: string[]) {
-      const mine = this.me?.roles || [];
-      return roles.some((role) => mine.includes(role));
+      return roles.some((role) => this.hasRole(role));
+    },
+    canAccess(access: AccessKey) {
+      return hasAccess(this.me?.roles || [], access);
     },
   },
 });

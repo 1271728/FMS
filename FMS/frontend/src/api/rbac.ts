@@ -1,5 +1,4 @@
-// src/api/rbac.ts
-import { http } from "./http";   // 关键：不用 "@/api/http"，避免别名链式问题
+import { http } from "./http";
 
 export interface RoleOption {
   id: number;
@@ -9,4 +8,8 @@ export interface RoleOption {
 
 export function apiRoles() {
   return http.get<any, RoleOption[]>("/rbac/roles");
+}
+
+export function apiAccessCodes() {
+  return http.get<any, string[]>("/rbac/access-codes");
 }

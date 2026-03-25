@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.example.fms.common.api.ApiResponse;
 import com.example.fms.modules.admin.user.mapper.RoleOption;
 import com.example.fms.modules.admin.user.service.AdminUserService;
+import com.example.fms.modules.shared.support.UserSupport;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,19 +13,17 @@ import java.util.List;
 
 /**
  * 角色/权限字典（RBAC）
- *
- * 说明：
- * - 该接口用于前端下拉字典（如：管理员创建用户时选择角色）
- * - 与 /api/admin/user/roleOptions 逻辑一致，仅提供更通用的 REST 路径：/api/rbac/roles
  */
 @RestController
 @RequestMapping("/api/rbac")
 public class RbacController {
 
     private final AdminUserService adminUserService;
+    private final UserSupport userSupport;
 
-    public RbacController(AdminUserService adminUserService) {
+    public RbacController(AdminUserService adminUserService, UserSupport userSupport) {
         this.adminUserService = adminUserService;
+        this.userSupport = userSupport;
     }
 
     private void checkAdmin() {
@@ -40,5 +39,15 @@ public class RbacController {
     public ApiResponse<List<RoleOption>> roles() {
         checkAdmin();
         return ApiResponse.ok(adminUserService.roleOptions());
+    }
+
+    /**
+     * GET /api/rbac/access-codes（已登录）
+     * 返回：当前用户可访问的前端能力码，例如 HOME/ADMIN_USERS/WORKFLOW_CENTER
+     */
+    @GetMapping("/access-codes")
+    public ApiResponse<List<String>> accessCodes() {
+        UserSupport.CurrentUser cu = userSupport.currentUser();
+        return ApiResponse.ok(userSupport.accessCodes(cu.getRoles()));
     }
 }

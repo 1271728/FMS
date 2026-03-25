@@ -2,16 +2,17 @@ package com.example.fms.modules.workflow.service.impl;
 
 import com.example.fms.common.api.PageResult;
 import com.example.fms.common.exception.BizException;
-import com.example.fms.modules.budgetAdjust.service.BudgetAdjustService;
-import com.example.fms.modules.reimburse.service.ReimburseService;
 import com.example.fms.modules.shared.support.UserSupport;
 import com.example.fms.modules.workflow.dto.*;
+import com.example.fms.modules.workflow.handler.WfBizHandler;
 import com.example.fms.modules.workflow.mapper.WfLogMapper;
 import com.example.fms.modules.workflow.mapper.WfTaskMapper;
 import com.example.fms.modules.workflow.service.WfService;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class WfServiceImpl implements WfService {
@@ -19,19 +20,22 @@ public class WfServiceImpl implements WfService {
     private final WfTaskMapper wfTaskMapper;
     private final WfLogMapper wfLogMapper;
     private final UserSupport userSupport;
-    private final ReimburseService reimburseService;
-    private final BudgetAdjustService budgetAdjustService;
+    private final Map<String, WfBizHandler> bizHandlerMap;
 
     public WfServiceImpl(WfTaskMapper wfTaskMapper,
                          WfLogMapper wfLogMapper,
                          UserSupport userSupport,
-                         ReimburseService reimburseService,
-                         BudgetAdjustService budgetAdjustService) {
+                         List<WfBizHandler> bizHandlers) {
         this.wfTaskMapper = wfTaskMapper;
         this.wfLogMapper = wfLogMapper;
         this.userSupport = userSupport;
-        this.reimburseService = reimburseService;
-        this.budgetAdjustService = budgetAdjustService;
+        this.bizHandlerMap = new LinkedHashMap<String, WfBizHandler>();
+        if (bizHandlers != null) {
+            for (WfBizHandler handler : bizHandlers) {
+                String key = upper(handler.bizType());
+                if (key != null && !key.isEmpty()) this.bizHandlerMap.put(key, handler);
+            }
+        }
     }
 
     @Override
@@ -79,33 +83,15 @@ public class WfServiceImpl implements WfService {
     @Override
     public void approve(WfActionReq req) {
         if (req == null || req.getBizId() == null) throw BizException.badRequest("bizId不能为空");
-        String bizType = upper(req.getBizType());
-        String nodeCode = upper(req.getNodeCode());
-        if (WfBizTypes.REIMB.equals(bizType)) {
-            reimburseService.workflowApprove(req.getBizId(), nodeCode, req.getComment());
-            return;
-        }
-        if (WfBizTypes.BUDGET_ADJUST.equals(bizType)) {
-            budgetAdjustService.workflowApprove(req.getBizId(), nodeCode, req.getComment());
-            return;
-        }
-        throw BizException.badRequest("暂不支持的bizType: " + req.getBizType());
+        WfBizHandler handler = requireHandler(req.getBizType());
+        handler.approve(req.getBizId(), upper(req.getNodeCode()), req.getComment());
     }
 
     @Override
     public void reject(WfActionReq req) {
         if (req == null || req.getBizId() == null) throw BizException.badRequest("bizId不能为空");
-        String bizType = upper(req.getBizType());
-        String nodeCode = upper(req.getNodeCode());
-        if (WfBizTypes.REIMB.equals(bizType)) {
-            reimburseService.workflowReject(req.getBizId(), nodeCode, req.getComment());
-            return;
-        }
-        if (WfBizTypes.BUDGET_ADJUST.equals(bizType)) {
-            budgetAdjustService.workflowReject(req.getBizId(), nodeCode, req.getComment());
-            return;
-        }
-        throw BizException.badRequest("暂不支持的bizType: " + req.getBizType());
+        WfBizHandler handler = requireHandler(req.getBizType());
+        handler.reject(req.getBizId(), upper(req.getNodeCode()), req.getComment());
     }
 
     @Override
@@ -113,6 +99,13 @@ public class WfServiceImpl implements WfService {
         userSupport.currentUser();
         if (bizId == null) throw BizException.badRequest("bizId不能为空");
         return wfLogMapper.selectByBiz(upper(bizType), bizId);
+    }
+
+    private WfBizHandler requireHandler(String bizType) {
+        String key = upper(bizType);
+        WfBizHandler handler = key == null ? null : bizHandlerMap.get(key);
+        if (handler == null) throw BizException.badRequest("暂不支持的bizType: " + bizType);
+        return handler;
     }
 
     private String safeTrim(String s) { return s == null ? null : s.trim(); }

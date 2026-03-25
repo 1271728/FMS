@@ -74,6 +74,7 @@ import { useRoute, useRouter } from "vue-router";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import { apiChangePassword, apiLogout } from "@/api/auth";
 import { useUserStore } from "@/stores/user";
+import { NAV_ITEMS, TITLE_MAP } from "@/constants/access";
 
 const route = useRoute();
 const router = useRouter();
@@ -107,30 +108,9 @@ const pwdRules: FormRules = {
   ],
 };
 
-const metaMap: Record<string, string> = {
-  "/home": "首页",
-  "/admin/users": "用户与权限管理",
-  "/project/manage": "项目管理",
-  "/budget/overview": "预算总览",
-  "/budget/adjust": "预算调整单",
-  "/reimburse/manage": "报销单管理",
-  "/workflow/center": "审批中心",
-  "/msg/center": "消息中心",
-};
+const currentTitle = computed(() => TITLE_MAP[route.path] || "科研经费报销管理系统");
 
-const currentTitle = computed(() => metaMap[route.path] || "科研经费报销管理系统");
-
-const menuItems = computed(() => {
-  const items: Array<{ path: string; label: string }> = [{ path: "/home", label: "首页" }];
-  if (user.isAdmin) items.push({ path: "/admin/users", label: "用户与权限" });
-  if (user.canManageProject) items.push({ path: "/project/manage", label: "项目管理" });
-  if (user.canManageProject) items.push({ path: "/budget/overview", label: "预算总览" });
-  if (user.canManageProject) items.push({ path: "/budget/adjust", label: "预算调整单" });
-  if (user.canManageProject) items.push({ path: "/reimburse/manage", label: "报销单管理" });
-  if (user.isAdmin || user.isUnitAdmin || user.isFinance) items.push({ path: "/workflow/center", label: "审批中心" });
-  items.push({ path: "/msg/center", label: "消息中心" });
-  return items;
-});
+const menuItems = computed(() => NAV_ITEMS.filter((item) => user.canAccess(item.access)));
 
 function goHome() {
   router.push("/home");
