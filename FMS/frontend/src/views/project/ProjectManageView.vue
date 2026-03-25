@@ -204,9 +204,10 @@
           </el-table-column>
           <el-table-column label="控制方式" width="120" align="center">
             <template #default="{ row }">
-              <el-tag :type="allocationControlMode(row.approvedAmount) === '禁止超支' ? 'warning' : 'info'" effect="light">
-                {{ allocationControlMode(row.approvedAmount) }}
-              </el-tag>
+              <el-select v-model="row.controlMode" size="small" style="width:100%">
+                <el-option label="禁止超支" value="禁止超支" />
+                <el-option label="不控制" value="不控制" />
+              </el-select>
             </template>
           </el-table-column>
           <el-table-column label="分配金额" width="180">
@@ -352,6 +353,7 @@ const { roles } = storeToRefs(userStore);
 const editFormRef = ref<FormInstance>();
 
 type ScopeKey = 'all' | 'lead' | 'joined' | 'todo';
+type ControlMode = '禁止超支' | '不控制';
 
 const loading = ref(false);
 const tableData = ref<ProjectVO[]>([]);
@@ -359,7 +361,7 @@ const pager = reactive({ pageNo: 1, pageSize: 10, total: 0 });
 const activeScope = ref<ScopeKey>('all');
 const searchForm = reactive<{ keyword: string; status: number | null; todoOnly: boolean }>({ keyword: '', status: null, todoOnly: false });
 type SubjectOption = { id: number; code: string; name: string };
-type EditableBudgetLine = ProjectBudgetLineReq & { subjectCode: string; subjectName: string };
+type EditableBudgetLine = ProjectBudgetLineReq & { subjectCode: string; subjectName: string; controlMode: ControlMode };
 const subjectOptions = ref<SubjectOption[]>([]);
 
 const editDialog = reactive({
@@ -497,7 +499,7 @@ function percentage(value?: number | null) {
   if (total <= 0 || amount <= 0) return '-';
   return `${((amount / total) * 100).toFixed(2)}%`;
 }
-function allocationControlMode(value?: number | null) {
+function defaultControlMode(value?: number | null): ControlMode {
   return Number(value || 0) > 0 ? '禁止超支' : '不控制';
 }
 
@@ -534,6 +536,7 @@ function buildBudgetLines(existing: ProjectBudgetVO[] = []): EditableBudgetLine[
     subjectCode: item.code,
     subjectName: item.name,
     approvedAmount: map.get(item.id) ?? null,
+    controlMode: defaultControlMode(map.get(item.id)),
   }));
 }
 function resetEditForm() {
@@ -584,7 +587,9 @@ async function submitEdit() {
     ElMessage.warning(`预算分配未完成：分配合计必须等于预算总额（当前差额 ${money(allocatedDiff.value)}）`);
     return;
   }
-  const budgetLines = editDialog.form.budgetLines.filter((item) => item.subjectId && Number(item.approvedAmount || 0) > 0);
+  const budgetLines = editDialog.form.budgetLines
+    .filter((item) => item.subjectId && Number(item.approvedAmount || 0) > 0)
+    .map((item) => ({ subjectId: item.subjectId, approvedAmount: item.approvedAmount }));
   editDialog.saving = true;
   try {
     const payload = {
