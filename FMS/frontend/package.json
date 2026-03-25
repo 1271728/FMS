@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "vue-tsc -b --pretty false",
+    "check": "npm run typecheck && npm run build"
   },
   "dependencies": {
     "axios": "^1.13.6",

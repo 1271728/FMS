@@ -63,3 +63,13 @@ DB_PASSWORD='***' \
 SERVER_PORT=8080 \
 mvn spring-boot:run
 ```
+
+## Quality Gate (建议在提交前执行)
+
+```bash
+# 后端单元测试
+mvn test
+
+# 后端打包（含编译检查）
+mvn -DskipTests package
+```
