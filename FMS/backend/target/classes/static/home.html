@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FMS - Home</title>
+  <style>
+    :root{ --bg:#0b1220; --card:#0f172a; --muted:#94a3b8; --text:#e2e8f0; --line:#1f2a44; --btn:#2563eb; --danger:#ef4444; }
+    *{box-sizing:border-box}
+    body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: radial-gradient(900px 500px at 10% 10%, rgba(37,99,235,.25), transparent 55%), var(--bg); color:var(--text); min-height:100vh; padding:22px;}
+    .top{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
+    .brand{display:flex; flex-direction:column; gap:4px}
+    .brand h1{margin:0; font-size:18px}
+    .brand p{margin:0; color:var(--muted); font-size:12px}
+    .btn{border:none; border-radius:12px; padding:10px 14px; font-weight:600; cursor:pointer; background:var(--btn); color:#fff}
+    .btn.ghost{background:transparent; border:1px solid var(--line); color:var(--text)}
+    .btn.danger{background:var(--danger)}
+    .grid{margin-top:18px; display:grid; grid-template-columns: 1fr 1fr; gap:14px}
+    @media (max-width: 860px){ .grid{grid-template-columns:1fr;} }
+    .card{background:rgba(15,23,42,.86); border:1px solid rgba(148,163,184,.16); border-radius:18px; padding:16px; box-shadow:0 20px 55px rgba(0,0,0,.35)}
+    .card h2{margin:0 0 10px; font-size:14px}
+    .kv{display:grid; grid-template-columns: 120px 1fr; gap:10px; font-size:13px; color:var(--muted)}
+    .kv b{color:var(--text); font-weight:600}
+    .roles{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+    .tag{font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid rgba(148,163,184,.2); background:rgba(148,163,184,.08)}
+    .msg{margin-top:10px; font-size:12px; color:var(--muted)}
+    input{height:40px; border-radius:12px; border:1px solid var(--line); background:rgba(2,6,23,.35); color:var(--text); padding:0 12px; outline:none}
+    input:focus{border-color: rgba(37,99,235,.8); box-shadow:0 0 0 4px rgba(37,99,235,.15)}
+    .row{display:flex; flex-direction:column; gap:8px; margin-top:10px}
+    label{font-size:12px; color:var(--muted)}
+    .actions{margin-top:12px; display:flex; gap:10px; flex-wrap:wrap}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">
+      <h1>科研经费报销管理系统 · Home</h1>
+      <p>本页用于验证登录效果：读取 /api/auth/me，并支持退出/改密</p>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" onclick="location.href='index.html'">返回登录页</button>
+      <button class="btn danger" onclick="logout()">退出登录</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>当前登录用户（/api/auth/me）</h2>
+      <div class="kv" id="kv"></div>
+      <div class="roles" id="roles"></div>
+      <div class="msg" id="hint"></div>
+    </div>
+
+    <div class="card">
+      <h2>修改密码（/api/auth/changePassword）</h2>
+      <div class="row">
+        <label>旧密码</label>
+        <input id="oldPwd" type="password" placeholder="请输入旧密码" />
+      </div>
+      <div class="row">
+        <label>新密码</label>
+        <input id="newPwd" type="password" placeholder="请输入新密码" />
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="changePassword()">提交修改</button>
+      </div>
+      <div class="msg" id="pwdMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN_KEY = 'FMS_TOKEN';
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    function renderKV(me){
+      const kv = document.getElementById('kv');
+      kv.innerHTML = `
+        <div>用户ID</div><b class="mono">${me.id ?? ''}</b>
+        <div>用户名</div><b>${me.username ?? ''}</b>
+        <div>姓名</div><b>${me.realName ?? ''}</b>
+        <div>单位</div><b>${me.unitName ?? ''} (${me.unitId ?? ''})</b>
+      `;
+
+      const roles = document.getElementById('roles');
+      roles.innerHTML = '';
+      (me.roles || []).forEach(r => {
+        const s = document.createElement('span');
+        s.className = 'tag';
+        s.textContent = r;
+        roles.appendChild(s);
+      });
+    }
+
+    async function loadMe(){
+      const hint = document.getElementById('hint');
+      if(!token){
+        hint.textContent = '未检测到 token，请先在登录页登录。';
+        return;
+      }
+      hint.textContent = '加载中...';
+      try{
+        const resp = await fetch('/api/auth/me', {
+          headers: { 'token': token }
+        });
+        const json = await resp.json();
+        if(!json || !json.success){
+          hint.textContent = (json && json.message) ? json.message : '读取 me 失败';
+          return;
+        }
+        renderKV(json.data);
+        hint.textContent = '✅ 已登录。你现在可以开始做“管理员创建用户/分配角色”等后续模块。';
+      }catch(e){
+        hint.textContent = '网络或服务异常：' + (e && e.message ? e.message : e);
+      }
+    }
+
+    async function logout(){
+      if(!token){
+        localStorage.removeItem(TOKEN_KEY);
+        location.href='index.html';
+        return;
+      }
+      try{
+        await fetch('/api/auth/logout', { method:'POST', headers: { 'token': token } });
+      }catch(e){ /* ignore */ }
+      localStorage.removeItem(TOKEN_KEY);
+      location.href='index.html';
+    }
+
+    async function changePassword(){
+      const oldPassword = document.getElementById('oldPwd').value;
+      const newPassword = document.getElementById('newPwd').value;
+      const msg = document.getElementById('pwdMsg');
+      msg.textContent = '';
+      if(!token){
+        msg.textContent = '请先登录';
+        return;
+      }
+      if(!oldPassword || !newPassword){
+        msg.textContent = '请输入旧密码和新密码';
+        return;
+      }
+      try{
+        const resp = await fetch('/api/auth/changePassword', {
+          method:'POST',
+          headers: { 'Content-Type':'application/json', 'token': token },
+          body: JSON.stringify({ oldPassword, newPassword })
+        });
+        const json = await resp.json();
+        if(!json || !json.success){
+          msg.textContent = (json && json.message) ? json.message : '修改失败';
+          return;
+        }
+        msg.textContent = '✅ 修改成功（下次登录生效）';
+      }catch(e){
+        msg.textContent = '网络或服务异常：' + (e && e.message ? e.message : e);
+      }
+    }
+
+    loadMe();
+  </script>
+</body>
+</html>

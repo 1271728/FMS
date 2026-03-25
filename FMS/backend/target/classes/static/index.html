@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>科研经费报销管理系统 - 登录</title>
+  <style>
+    :root{
+      --bg1:#0ea5e9; --bg2:#6366f1; --card:#ffffff; --text:#0f172a; --muted:#64748b;
+      --danger:#ef4444; --ok:#16a34a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      min-height:100vh;
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(255,255,255,.18), transparent 60%),
+                  linear-gradient(135deg, var(--bg1), var(--bg2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .wrap{width:100%; max-width:960px; display:grid; grid-template-columns: 1.2fr .8fr; gap:20px; align-items:stretch;}
+    @media (max-width: 860px){ .wrap{grid-template-columns: 1fr; max-width:520px;} }
+    .hero{
+      color:#fff;
+      padding:28px;
+      border-radius:20px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.18);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 60px rgba(2,6,23,.25);
+      position:relative;
+      overflow:hidden;
+    }
+    .hero h1{margin:0 0 10px; font-size:26px; letter-spacing:.5px;}
+    .hero p{margin:0 0 14px; color:rgba(255,255,255,.88); line-height:1.7;}
+    .badge{display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); font-size:12px;}
+    .roles{margin-top:16px; display:flex; flex-wrap:wrap; gap:8px;}
+    .role{font-size:12px; padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18)}
+    .card{
+      background:var(--card);
+      border-radius:20px;
+      padding:26px;
+      box-shadow: 0 20px 60px rgba(2,6,23,.25);
+    }
+    .card h2{margin:0 0 6px; font-size:18px;}
+    .sub{margin:0 0 18px; color:var(--muted); font-size:13px;}
+    .row{display:flex; flex-direction:column; gap:8px; margin-bottom:12px;}
+    label{font-size:13px; color:#334155}
+    input{
+      height:42px; padding:0 12px; border-radius:12px; border:1px solid #e2e8f0;
+      outline:none; font-size:14px;
+    }
+    input:focus{border-color:#93c5fd; box-shadow: 0 0 0 4px rgba(59,130,246,.15)}
+    .btn{
+      height:44px; border:none; border-radius:12px; cursor:pointer;
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color:#fff; font-weight:600; font-size:14px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .btn:disabled{opacity:.65; cursor:not-allowed}
+    .hint{margin-top:12px; font-size:12px; color:var(--muted); line-height:1.6}
+    .msg{margin-top:12px; padding:10px 12px; border-radius:12px; font-size:13px; display:none}
+    .msg.err{display:block; background:#fef2f2; color:#991b1b; border:1px solid #fecaca}
+    .msg.ok{display:block; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0}
+    .small{font-size:12px; color:var(--muted)}
+    .footer{margin-top:18px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap}
+    .link{color:#2563eb; text-decoration:none; font-size:12px}
+    .link:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="badge">🔒 统一认证 · Sa-Token</div>
+      <h1>科研经费线上报销管理系统</h1>
+      <p>
+        覆盖报销申请、二级单位审核、财务处复核、支付归档等核心流程。
+        通过权限分离与流程留痕，提升报销效率与经费监管能力。
+      </p>
+      <div class="roles">
+        <span class="role">TEACHER 教师</span>
+        <span class="role">FIN_UNIT 二级审核</span>
+        <span class="role">FIN_CENTER 财务复核</span>
+        <span class="role">ADMIN 系统管理员</span>
+      </div>
+      <p class="small" style="margin-top:14px;">
+        说明：系统默认不开放自助注册，账号由管理员创建并分配角色。
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>登录</h2>
+      <p class="sub">请输入账号和密码以继续</p>
+
+      <div class="row">
+        <label for="username">用户名</label>
+        <input id="username" placeholder="例如：admin / pi_zhang" autocomplete="username" />
+      </div>
+      <div class="row">
+        <label for="password">密码</label>
+        <input id="password" type="password" placeholder="请输入密码" autocomplete="current-password" />
+      </div>
+
+      <button id="btn" class="btn">登录</button>
+      <div id="msg" class="msg"></div>
+
+      <div class="hint">
+        <div>✅ 登录成功后将跳转到 <b>home.html</b> 并展示当前用户信息（/api/auth/me）。</div>
+        <div>ℹ️ Token 将保存在浏览器 localStorage 中，键名：<code>FMS_TOKEN</code></div>
+      </div>
+
+      <div class="footer">
+        <span class="small">后台接口前缀：/api/auth</span>
+        <a class="link" href="home.html">直接进入 Home（需要已登录）</a>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const TOKEN_KEY = 'FMS_TOKEN';
+
+    function showMsg(type, text){
+      const el = $('msg');
+      el.className = 'msg ' + (type === 'ok' ? 'ok' : 'err');
+      el.textContent = text;
+    }
+
+    async function login(){
+      const username = $('username').value.trim();
+      const password = $('password').value;
+
+      if(!username || !password){
+        showMsg('err', '请输入用户名和密码');
+        return;
+      }
+
+      $('btn').disabled = true;
+      try{
+        const resp = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const json = await resp.json();
+        if(!json || !json.success){
+          showMsg('err', (json && json.message) ? json.message : '登录失败');
+          return;
+        }
+        const tokenValue = json.data && json.data.tokenValue;
+        if(!tokenValue){
+          showMsg('err', '登录成功但未返回 tokenValue，请检查后端返回');
+          return;
+        }
+        localStorage.setItem(TOKEN_KEY, tokenValue);
+        showMsg('ok', '登录成功，正在跳转...');
+        setTimeout(() => location.href = 'home.html', 350);
+      }catch(e){
+        showMsg('err', '网络或服务异常：' + (e && e.message ? e.message : e));
+      }finally{
+        $('btn').disabled = false;
+      }
+    }
+
+    $('btn').addEventListener('click', login);
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>
