@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useUserStore } from "@/stores/user";
+import type { AccessKey } from "@/constants/access";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -10,14 +11,14 @@ const router = createRouter({
       path: "/app",
       component: () => import("@/layouts/MainLayout.vue"),
       children: [
-        { path: "/home", component: () => import("@/views/home/DashboardHomeView.vue"), meta: { roles: ["PI", "ADMIN", "UNIT_ADMIN", "FINANCE"] } },
-        { path: "/admin/users", component: () => import("@/views/admin/AdminUserManageView.vue"), meta: { roles: ["ADMIN"] } },
-        { path: "/project/manage", component: () => import("@/views/project/ProjectManageView.vue"), meta: { roles: ["PI", "ADMIN", "UNIT_ADMIN", "FINANCE"] } },
-        { path: "/budget/overview", component: () => import("@/views/budget/BudgetOverviewView.vue"), meta: { roles: ["PI", "ADMIN", "UNIT_ADMIN", "FINANCE"] } },
-        { path: "/budget/adjust", component: () => import("@/views/budget/BudgetAdjustManageView.vue"), meta: { roles: ["PI", "ADMIN", "UNIT_ADMIN", "FINANCE"] } },
-        { path: "/reimburse/manage", component: () => import("@/views/reimburse/ReimburseManageView.vue"), meta: { roles: ["PI", "ADMIN", "UNIT_ADMIN", "FINANCE"] } },
-        { path: "/workflow/center", component: () => import("@/views/workflow/WorkflowCenterView.vue"), meta: { roles: ["ADMIN", "UNIT_ADMIN", "FINANCE"] } },
-        { path: "/msg/center", component: () => import("@/views/msg/MsgCenterView.vue"), meta: { roles: ["PI", "ADMIN", "UNIT_ADMIN", "FINANCE"] } },
+        { path: "/home", component: () => import("@/views/home/DashboardHomeView.vue"), meta: { access: "HOME" as AccessKey } },
+        { path: "/admin/users", component: () => import("@/views/admin/AdminUserManageView.vue"), meta: { access: "ADMIN_USERS" as AccessKey } },
+        { path: "/project/manage", component: () => import("@/views/project/ProjectManageView.vue"), meta: { access: "PROJECT_MANAGE" as AccessKey } },
+        { path: "/budget/overview", component: () => import("@/views/budget/BudgetOverviewView.vue"), meta: { access: "BUDGET_OVERVIEW" as AccessKey } },
+        { path: "/budget/adjust", component: () => import("@/views/budget/BudgetAdjustManageView.vue"), meta: { access: "BUDGET_ADJUST" as AccessKey } },
+        { path: "/reimburse/manage", component: () => import("@/views/reimburse/ReimburseManageView.vue"), meta: { access: "REIMBURSE_MANAGE" as AccessKey } },
+        { path: "/workflow/center", component: () => import("@/views/workflow/WorkflowCenterView.vue"), meta: { access: "WORKFLOW_CENTER" as AccessKey } },
+        { path: "/msg/center", component: () => import("@/views/msg/MsgCenterView.vue"), meta: { access: "MSG_CENTER" as AccessKey } },
       ],
     },
   ],
@@ -56,8 +57,8 @@ router.beforeEach(async (to) => {
     return { path: user.defaultHomePath };
   }
 
-  const roles = to.meta.roles as string[] | undefined;
-  if (roles && !user.hasAnyRole(roles)) {
+  const access = to.meta.access as AccessKey | undefined;
+  if (access && !user.canAccess(access)) {
     return { path: user.defaultHomePath };
   }
 
