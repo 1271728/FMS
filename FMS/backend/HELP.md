@@ -20,3 +20,21 @@ The following guides illustrate how to use some features concretely:
 * [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
 * [Accessing data with MySQL](https://spring.io/guides/gs/accessing-data-mysql/)
 
+
+### Environment Profiles (dev/prod)
+
+This project now separates shared and environment-specific configuration:
+
+- `application.properties`: shared/base settings (profile switch, MyBatis, Sa-Token)
+- `application-dev.properties`: local development defaults
+- `application-prod.properties`: production settings (expects env vars)
+
+Recommended environment variables:
+
+- `SPRING_PROFILES_ACTIVE` (`dev` or `prod`)
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `SERVER_PORT`
+- `SA_TOKEN_LOG`
+- `MYBATIS_LOG_IMPL`
