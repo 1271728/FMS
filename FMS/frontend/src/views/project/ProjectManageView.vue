@@ -186,22 +186,71 @@
         <div class="section-head">
           <div>
             <div class="section-title">预算分配</div>
-            <div class="section-tip">提交项目审批时，预算分配会一并校验。分配合计建议等于预算总额。</div>
+            <div class="section-tip">提交项目审批时，预算分配会一并校验。每条分配需选择唯一预算科目且金额大于 0，分配合计需严格等于预算总额。</div>
           </div>
-          <el-button type="primary" plain @click="addBudgetLine">新增预算分配</el-button>
+          <div class="budget-actions">
+            <el-button plain @click="fillRemainingBudget" :disabled="!canAutoFillRemaining">自动补齐差额</el-button>
+            <el-button type="primary" plain @click="addBudgetLine">新增预算分配</el-button>
+          </div>
         </div>
 
+        <div class="budget-kpi-grid">
+          <div class="kpi-item">
+            <span>预算总额</span>
+            <b>{{ money(editDialog.form.totalBudget) }}</b>
+          </div>
+          <div class="kpi-item">
+            <span>分配合计</span>
+            <b>{{ money(allocatedTotal) }}</b>
+          </div>
+          <div class="kpi-item">
+            <span>科目覆盖</span>
+            <b>{{ filledBudgetLineCount }} / {{ editDialog.form.budgetLines.length }}</b>
+          </div>
+          <div class="kpi-item">
+            <span>分配完成度</span>
+            <div class="kpi-progress">
+              <el-progress :percentage="allocationProgressPercent" :stroke-width="8" />
+            </div>
+          </div>
+        </div>
+
+        <el-alert
+          v-if="showBudgetAlert"
+          :title="budgetAlertText"
+          :type="Math.abs(allocatedDiff) < 0.005 ? 'success' : 'warning'"
+          show-icon
+          :closable="false"
+          class="budget-alert"
+        />
+
         <el-table :data="editDialog.form.budgetLines" border class="budget-table">
+          <el-table-column label="#" width="60" align="center">
+            <template #default="{ $index }">
+              <span class="line-index">{{ $index + 1 }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="预算科目" min-width="260">
             <template #default="{ row }">
               <el-select v-model="row.subjectId" filterable clearable placeholder="请选择预算科目" style="width:100%">
-                <el-option v-for="item in subjectOptions" :key="item.id" :label="`${item.code}｜${item.name}`" :value="item.id" />
+                <el-option
+                  v-for="item in subjectOptions"
+                  :key="item.id"
+                  :label="`${item.code}｜${item.name}`"
+                  :value="item.id"
+                  :disabled="isSubjectTakenByOtherLine(item.id, row)"
+                />
               </el-select>
             </template>
           </el-table-column>
           <el-table-column label="分配金额" width="180">
             <template #default="{ row }">
               <el-input-number v-model="row.approvedAmount" :min="0" :precision="2" :step="100" style="width:100%" />
+            </template>
+          </el-table-column>
+          <el-table-column label="占总预算比例" width="160" align="center">
+            <template #default="{ row }">
+              <span>{{ budgetLinePercent(row.approvedAmount) }}%</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="90" fixed="right">
@@ -408,6 +457,25 @@ const scopeTabs = computed(() => {
 const allocatedTotal = computed(() => editDialog.form.budgetLines.reduce((sum, item) => sum + Number(item.approvedAmount || 0), 0));
 const allocatedDiff = computed(() => Number(editDialog.form.totalBudget || 0) - allocatedTotal.value);
 const allocatedDiffClass = computed(() => Math.abs(allocatedDiff.value) < 0.005 ? 'budget-ok' : 'budget-warn');
+const filledBudgetLineCount = computed(() => editDialog.form.budgetLines.filter((item) => item.subjectId && Number(item.approvedAmount || 0) > 0).length);
+const allocationProgressPercent = computed(() => {
+  const total = Number(editDialog.form.totalBudget || 0);
+  if (total <= 0) return 0;
+  const percent = (allocatedTotal.value / total) * 100;
+  return Math.max(0, Math.min(100, Number(percent.toFixed(2))));
+});
+const canAutoFillRemaining = computed(() => {
+  if (Math.abs(allocatedDiff.value) < 0.005 || allocatedDiff.value <= 0) return false;
+  return editDialog.form.budgetLines.some((item) => item.subjectId && Number(item.approvedAmount || 0) >= 0);
+});
+const showBudgetAlert = computed(() => !!editDialog.form.totalBudget && editDialog.form.budgetLines.length > 0);
+const budgetAlertText = computed(() => {
+  if (!editDialog.form.totalBudget) return '请先填写预算总额，再完善预算分配。';
+  if (Math.abs(allocatedDiff.value) < 0.005) return '预算分配校验通过：合计金额与预算总额一致，可提交审批。';
+  return allocatedDiff.value > 0
+    ? `当前仍有 ${money(allocatedDiff.value)} 未分配，请继续分配。`
+    : `当前超分配 ${money(Math.abs(allocatedDiff.value))}，请调整后再保存。`;
+});
 
 function flattenSubjects(list: BudgetSubjectNode[], out: Array<{ id: number; code: string; name: string }>) {
   for (const item of list || []) {
@@ -520,6 +588,48 @@ function removeBudgetLine(index: number) {
   }
   editDialog.form.budgetLines.splice(index, 1);
 }
+function isSubjectTakenByOtherLine(subjectId: number, line: ProjectBudgetLineReq) {
+  return editDialog.form.budgetLines.some((item) => item !== line && item.subjectId === subjectId);
+}
+function budgetLinePercent(value?: number | null) {
+  const total = Number(editDialog.form.totalBudget || 0);
+  if (total <= 0) return '0.00';
+  return ((Number(value || 0) / total) * 100).toFixed(2);
+}
+function fillRemainingBudget() {
+  const diff = Number(allocatedDiff.value.toFixed(2));
+  if (diff <= 0) return;
+  const target = [...editDialog.form.budgetLines].reverse().find((item) => item.subjectId && Number(item.approvedAmount || 0) >= 0);
+  if (!target) {
+    ElMessage.warning('请先至少选择一个预算科目');
+    return;
+  }
+  target.approvedAmount = Number((Number(target.approvedAmount || 0) + diff).toFixed(2));
+}
+function validateBudgetPlan() {
+  if (!editDialog.form.totalBudget || Number(editDialog.form.totalBudget) <= 0) {
+    ElMessage.warning('预算总额必须大于 0');
+    return false;
+  }
+  const usedSubjects = new Set<number>();
+  for (let i = 0; i < editDialog.form.budgetLines.length; i += 1) {
+    const line = editDialog.form.budgetLines[i];
+    if (!line.subjectId || !line.approvedAmount || Number(line.approvedAmount) <= 0) {
+      ElMessage.warning(`请完整填写第 ${i + 1} 行预算分配（预算科目和金额必须有效）`);
+      return false;
+    }
+    if (usedSubjects.has(line.subjectId)) {
+      ElMessage.warning(`预算科目不能重复，请检查第 ${i + 1} 行`);
+      return false;
+    }
+    usedSubjects.add(line.subjectId);
+  }
+  if (Math.abs(allocatedDiff.value) >= 0.005) {
+    ElMessage.warning('预算分配合计必须等于预算总额后才能保存');
+    return false;
+  }
+  return true;
+}
 
 function openCreate() {
   editDialog.mode = 'create';
@@ -550,7 +660,8 @@ async function submitEdit() {
     ElMessage.warning('结束日期不能早于开始日期');
     return;
   }
-  const budgetLines = editDialog.form.budgetLines.filter((item) => item.subjectId && Number(item.approvedAmount || 0) > 0);
+  if (!validateBudgetPlan()) return;
+  const budgetLines = editDialog.form.budgetLines.map((item) => ({ subjectId: item.subjectId, approvedAmount: Number(item.approvedAmount) }));
   editDialog.saving = true;
   try {
     const payload = {
@@ -694,6 +805,14 @@ onMounted(async () => {
 .section-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin: 10px 0 12px; }
 .section-title { font-size: 16px; font-weight: 700; color: #0f172a; }
 .section-tip { margin-top: 4px; color:#64748b; font-size:13px; }
+.budget-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+.budget-kpi-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.kpi-item { border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff; padding: 12px 14px; display:flex; flex-direction:column; gap:8px; }
+.kpi-item span { font-size: 12px; color:#64748b; }
+.kpi-item b { font-size: 16px; color:#0f172a; }
+.kpi-progress { margin-top: 2px; }
+.budget-alert { margin-bottom: 12px; }
+.line-index { font-weight: 700; color:#334155; }
 .budget-summary { display:flex; justify-content:flex-end; gap:22px; margin-top:12px; color:#475569; flex-wrap:wrap; }
 .budget-summary b { color:#0f172a; }
 .budget-ok { color:#16a34a; }
@@ -715,5 +834,6 @@ onMounted(async () => {
 @media (max-width: 960px) {
   .detail-grid, .audit-grid { grid-template-columns: 1fr; }
   .member-top, .section-head { flex-direction:column; align-items:flex-start; }
+  .budget-kpi-grid { grid-template-columns: 1fr 1fr; }
 }
 </style>
