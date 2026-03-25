@@ -202,6 +202,13 @@
               <div class="subject-name-cell">{{ row.subjectName }}</div>
             </template>
           </el-table-column>
+          <el-table-column label="控制方式" width="120" align="center">
+            <template #default="{ row }">
+              <el-tag :type="allocationControlMode(row.approvedAmount) === '禁止超支' ? 'warning' : 'info'" effect="light">
+                {{ allocationControlMode(row.approvedAmount) }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="分配金额" width="180">
             <template #default="{ row }">
               <el-input-number v-model="row.approvedAmount" :min="0" :precision="2" :step="100" style="width:100%" />
@@ -490,6 +497,9 @@ function percentage(value?: number | null) {
   if (total <= 0 || amount <= 0) return '-';
   return `${((amount / total) * 100).toFixed(2)}%`;
 }
+function allocationControlMode(value?: number | null) {
+  return Number(value || 0) > 0 ? '禁止超支' : '不控制';
+}
 
 function changeScope(scope: ScopeKey) {
   activeScope.value = scope;
@@ -568,6 +578,10 @@ async function submitEdit() {
   await editFormRef.value?.validate();
   if (editDialog.form.startDate && editDialog.form.endDate && editDialog.form.startDate > editDialog.form.endDate) {
     ElMessage.warning('结束日期不能早于开始日期');
+    return;
+  }
+  if (Math.abs(allocatedDiff.value) >= 0.005) {
+    ElMessage.warning(`预算分配未完成：分配合计必须等于预算总额（当前差额 ${money(allocatedDiff.value)}）`);
     return;
   }
   const budgetLines = editDialog.form.budgetLines.filter((item) => item.subjectId && Number(item.approvedAmount || 0) > 0);
