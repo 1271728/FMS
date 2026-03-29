@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="card">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="card app-card">
       <template #header>
         <div class="card-head">
           <div>
@@ -11,7 +11,7 @@
         </div>
       </template>
 
-      <el-form :inline="true" class="query-row" @submit.prevent>
+      <el-form :inline="true" class="query-row app-query-row" @submit.prevent>
         <el-form-item label="业务类型">
           <el-select v-model="query.bizType" clearable class="w140">
             <el-option label="报销单" value="REIMB" />
@@ -33,7 +33,7 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="hover" class="card mt16">
+    <el-card shadow="hover" class="card app-card mt16 app-mt16">
       <div class="tab-row">
         <el-tabs v-model="activeTab" @tab-change="handleTabChange">
           <el-tab-pane label="我的待办" name="todo" />
@@ -495,13 +495,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
 .card { border-radius:18px; border:none; }
 .mt16 { margin-top: 16px; }
 .card-head { display:flex; justify-content:space-between; align-items:center; gap:16px; }
 .head-title { font-size: 22px; font-weight: 700; color: #111827; }
 .head-tip { margin-top: 6px; color: #6b7280; font-size: 13px; }
-.query-row { margin-top: 2px; display:flex; flex-wrap:wrap; gap: 2px 4px; }
+.query-row { margin-top: 2px; }
 .tab-row :deep(.el-tabs__header) { margin-bottom: 12px; }
 .w140 { width: 140px; }
 .w160 { width: 160px; }

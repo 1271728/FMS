@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="card">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="card app-card">
       <el-form :model="query" inline>
         <el-form-item label="关键字">
           <el-input v-model="query.keyword" clearable placeholder="单号 / 原因 / 项目名" style="width:220px" />
@@ -27,7 +27,7 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="hover" class="card mt16">
+    <el-card shadow="hover" class="card mt16 app-card app-mt16">
       <el-table :data="page.records" border v-loading="loading">
         <el-table-column prop="adjustNo" label="调整单号" width="160" />
         <el-table-column label="项目" min-width="220">
@@ -404,12 +404,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
-.hero-card { display:flex; justify-content:space-between; align-items:center; gap:16px; border-radius:18px; padding:22px 24px; color:#fff; }
-.adjust-hero { background: linear-gradient(135deg, #7c3aed, #a855f7); box-shadow: 0 12px 28px rgba(124,58,237,.16); }
-.page-title { font-size:28px; font-weight:700; }
-.page-subtitle { margin-top:8px; opacity:.92; line-height:1.8; }
-.toolbar-right { display:flex; gap:10px; }
 .mt16 { margin-top:16px; }
 .card { border-radius:18px; border:none; }
 .note-line { margin-top: 6px; color:#64748b; font-size:13px; }
@@ -433,7 +427,7 @@ onMounted(async () => {
 .delta-up { color:#059669; font-weight:700; }
 .delta-down { color:#dc2626; font-weight:700; }
 @media (max-width: 980px) {
-  .hero-card, .section-head { flex-direction:column; align-items:flex-start; }
+  .section-head { flex-direction:column; align-items:flex-start; }
   .detail-grid { grid-template-columns:1fr; }
 }
 </style>

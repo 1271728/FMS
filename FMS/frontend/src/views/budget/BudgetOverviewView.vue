@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="panel-card filter-card">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="panel-card filter-card app-card">
       <div class="toolbar-row">
         <div class="toolbar-left">
           <span class="toolbar-label">项目</span>
@@ -33,7 +33,7 @@
       </div>
     </el-card>
 
-    <el-card shadow="hover" class="panel-card budget-ledger-card">
+    <el-card shadow="hover" class="panel-card budget-ledger-card app-card">
       <div class="ledger-wrap" v-loading="loadingBudget">
         <el-table
           ref="tableRef"
@@ -320,12 +320,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap {
-  min-height: 100vh;
-  background: #f4f7fb;
-  padding: 20px;
-}
-
 .panel-card {
   border-radius: 18px;
   border: none;

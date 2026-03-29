@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrap">
+  <div class="page-wrap app-page">
     <div class="page-head">
       <div>
         <div class="page-title">工作台</div>
@@ -15,8 +15,8 @@
       </el-card>
     </div>
 
-    <el-card shadow="hover" class="card mt16">
-      <template #header><div class="card-head"><span>快捷入口</span></div></template>
+    <el-card shadow="hover" class="card app-card mt16">
+      <template #header><div class="card-head app-card-head"><span>快捷入口</span></div></template>
       <div class="entry-grid">
         <div v-for="item in quickLinks" :key="item.path" class="entry-item" @click="go(item.path)">
           <div class="entry-name">{{ item.label }}</div>
@@ -64,13 +64,11 @@ onMounted(loadStats);
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
 .page-head { display:flex; justify-content:space-between; align-items:center; gap:16px; }
 .page-title { font-size: 24px; font-weight: 700; color:#111827; }
 .page-subtitle { margin-top: 6px; color:#6b7280; }
 .card, .stat-card { border-radius: 16px; border:none; }
 .mt16 { margin-top: 16px; }
-.card-head { font-weight:700; }
 .stats-grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; }
 .stat-label { font-size: 13px; color:#6b7280; }
 .stat-value { margin-top: 12px; font-size: 28px; font-weight: 800; color:#111827; }
