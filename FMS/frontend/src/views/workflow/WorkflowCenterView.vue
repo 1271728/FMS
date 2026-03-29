@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="card">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="card app-card">
       <template #header>
         <div class="card-head">
           <div>
@@ -11,32 +11,35 @@
         </div>
       </template>
 
-      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="我的待办" name="todo" />
-        <el-tab-pane label="我的已办" name="done" />
-      </el-tabs>
-
-      <el-form :inline="true" class="query-row" @submit.prevent>
+      <el-form :inline="true" class="query-row app-query-row" @submit.prevent>
         <el-form-item label="业务类型">
-          <el-select v-model="query.bizType" clearable style="width: 140px">
+          <el-select v-model="query.bizType" clearable class="w140">
             <el-option label="报销单" value="REIMB" />
             <el-option label="预算调整单" value="BUDGET_ADJUST" />
           </el-select>
         </el-form-item>
         <el-form-item label="节点">
-          <el-select v-model="query.nodeCode" clearable style="width: 160px">
+          <el-select v-model="query.nodeCode" clearable class="w160">
             <el-option v-for="item in nodeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="关键词">
-          <el-input v-model="query.keyword" clearable placeholder="单号 / 标题 / 项目名称" style="width: 240px" />
+          <el-input v-model="query.keyword" clearable placeholder="单号 / 标题 / 项目名称" class="w260" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="fetchPage(1)">查询</el-button>
           <el-button @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
+    </el-card>
 
+    <el-card shadow="hover" class="card app-card mt16 app-mt16">
+      <div class="tab-row">
+        <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+          <el-tab-pane label="我的待办" name="todo" />
+          <el-tab-pane label="我的已办" name="done" />
+        </el-tabs>
+      </div>
       <el-table v-loading="loading" :data="page.records" border stripe>
         <el-table-column prop="bizNo" label="业务单号" min-width="150" />
         <el-table-column label="业务类型" width="110">
@@ -492,12 +495,16 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
 .card { border-radius:18px; border:none; }
+.mt16 { margin-top: 16px; }
 .card-head { display:flex; justify-content:space-between; align-items:center; gap:16px; }
 .head-title { font-size: 22px; font-weight: 700; color: #111827; }
 .head-tip { margin-top: 6px; color: #6b7280; font-size: 13px; }
-.query-row { margin-top: 4px; }
+.query-row { margin-top: 2px; }
+.tab-row :deep(.el-tabs__header) { margin-bottom: 12px; }
+.w140 { width: 140px; }
+.w160 { width: 160px; }
+.w260 { width: 260px; }
 .op-list { display:flex; flex-wrap:wrap; gap:6px 2px; }
 .pager { display:flex; justify-content:flex-end; margin-top:16px; }
 .drawer-top { padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
@@ -516,6 +523,7 @@ onMounted(async () => {
 .delta-down { color:#dc2626; font-weight:700; }
 @media (max-width: 980px) {
   .card-head { flex-direction:column; align-items:flex-start; }
+  .w140, .w160, .w260 { width: 100%; }
   .summary-grid { grid-template-columns:1fr; }
 }
 </style>
