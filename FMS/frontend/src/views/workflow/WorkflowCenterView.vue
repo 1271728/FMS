@@ -1,16 +1,16 @@
 <template>
   <div class="page-wrap">
-    <div class="hero-card wf-hero">
-      <div>
-        <div class="page-title">审批中心</div>
-        <div class="page-subtitle">统一处理报销单与预算调整单的待办、已办和流转轨迹。</div>
-      </div>
-      <div class="toolbar-right">
-        <el-button @click="fetchPage(1)">刷新</el-button>
-      </div>
-    </div>
+    <el-card shadow="hover" class="card">
+      <template #header>
+        <div class="card-head">
+          <div>
+            <div class="head-title">审批中心</div>
+            <div class="head-tip">统一处理报销单与预算调整单的待办、已办和流转轨迹。</div>
+          </div>
+          <el-button @click="fetchPage(1)">刷新</el-button>
+        </div>
+      </template>
 
-    <el-card shadow="hover" class="card mt16">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <el-tab-pane label="我的待办" name="todo" />
         <el-tab-pane label="我的已办" name="done" />
@@ -25,9 +25,7 @@
         </el-form-item>
         <el-form-item label="节点">
           <el-select v-model="query.nodeCode" clearable style="width: 160px">
-            <el-option label="二级单位审核" value="UNIT_AUDIT" />
-            <el-option label="财务复核" value="FIN_REVIEW" />
-            <el-option label="支付归档" value="PAY_ARCHIVE" />
+            <el-option v-for="item in nodeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="关键词">
@@ -245,7 +243,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   apiWfApprove,
@@ -260,13 +258,32 @@ import { apiReimburseDetail, type ReimburseDetailVO } from '@/api/reimburse';
 import { apiBudgetAdjustDetail, type BudgetAdjustDetailVO } from '@/api/budgetAdjust';
 import { apiPayCreateOrUpdate } from '@/api/pay';
 import { apiArchiveCreate } from '@/api/archive';
+import { useUserStore } from '@/stores/user';
 
 const activeTab = ref<'todo' | 'done'>('todo');
+const user = useUserStore();
 const loading = ref(false);
 const actionSaving = ref(false);
 const payArchiveSaving = ref(false);
 const page = reactive({ records: [] as WfTaskVO[], total: 0, pageNo: 1, pageSize: 10 });
 const query = reactive({ bizType: '', nodeCode: '', keyword: '' });
+const nodeOptions = computed(() => {
+  if (user.isAdmin) {
+    return [
+      { label: '二级单位审核', value: 'UNIT_AUDIT' },
+      { label: '财务复核', value: 'FIN_REVIEW' },
+      { label: '支付归档', value: 'PAY_ARCHIVE' },
+    ];
+  }
+  if (user.isUnitAdmin) return [{ label: '二级单位审核', value: 'UNIT_AUDIT' }];
+  if (user.isFinance) {
+    return [
+      { label: '财务复核', value: 'FIN_REVIEW' },
+      { label: '支付归档', value: 'PAY_ARCHIVE' },
+    ];
+  }
+  return [];
+});
 
 const detailDrawer = reactive({
   visible: false,
@@ -348,6 +365,10 @@ function adjustStatusText(v?: number) {
 async function fetchPage(pageNo = page.pageNo) {
   loading.value = true;
   try {
+    const allowedNodeCodes = nodeOptions.value.map((item) => item.value);
+    if (query.nodeCode && !allowedNodeCodes.includes(query.nodeCode)) {
+      query.nodeCode = '';
+    }
     const payload = {
       pageNo,
       pageSize: page.pageSize,
@@ -472,13 +493,10 @@ onMounted(async () => {
 
 <style scoped>
 .page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
-.hero-card { display:flex; justify-content:space-between; align-items:center; gap:16px; border-radius:18px; padding:22px 24px; color:#fff; }
-.wf-hero { background: linear-gradient(135deg, #0f172a, #334155); box-shadow: 0 12px 28px rgba(15,23,42,.16); }
-.page-title { font-size:28px; font-weight:700; }
-.page-subtitle { margin-top:8px; opacity:.92; line-height:1.8; }
-.toolbar-right { display:flex; gap:10px; }
-.mt16 { margin-top:16px; }
 .card { border-radius:18px; border:none; }
+.card-head { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.head-title { font-size: 22px; font-weight: 700; color: #111827; }
+.head-tip { margin-top: 6px; color: #6b7280; font-size: 13px; }
 .query-row { margin-top: 4px; }
 .op-list { display:flex; flex-wrap:wrap; gap:6px 2px; }
 .pager { display:flex; justify-content:flex-end; margin-top:16px; }
@@ -497,7 +515,7 @@ onMounted(async () => {
 .delta-up { color:#059669; font-weight:700; }
 .delta-down { color:#dc2626; font-weight:700; }
 @media (max-width: 980px) {
-  .hero-card { flex-direction:column; align-items:flex-start; }
+  .card-head { flex-direction:column; align-items:flex-start; }
   .summary-grid { grid-template-columns:1fr; }
 }
 </style>
