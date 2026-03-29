@@ -40,11 +40,11 @@ const stats = reactive<DashboardStatsResp>({ role: '', unreadCount: 0, cards: []
 const quickLinks = computed(() => {
   const links: Array<{ path: string; label: string; tip: string }> = [];
   if (user.isAdmin) links.push({ path: '/admin/users', label: '用户与权限', tip: '维护组织、账号状态和角色配置' });
-  if (user.canManageProject) links.push({ path: '/project/manage', label: '项目管理', tip: '查看项目、成员与立项状态' });
-  if (user.canManageProject) links.push({ path: '/budget/overview', label: '预算总览', tip: '查看项目预算、余额和执行率' });
-  if (user.canManageProject) links.push({ path: '/budget/adjust', label: '预算调整单', tip: '发起或处理预算调整流程' });
-  if (user.canManageProject) links.push({ path: '/reimburse/manage', label: '报销单管理', tip: '维护报销单、明细与提交流程' });
-  if (user.isAdmin || user.isUnitAdmin || user.isFinance) links.push({ path: '/workflow/center', label: '审批中心', tip: '集中处理待办、已办和审批轨迹' });
+  if (user.canViewProjectModule) links.push({ path: '/project/manage', label: '项目管理', tip: '查看项目、成员与立项状态' });
+  if (user.canViewBudgetOverview) links.push({ path: '/budget/overview', label: '预算总览', tip: '查看项目预算、余额和执行率' });
+  if (user.canManageBudgetAdjust) links.push({ path: '/budget/adjust', label: '预算调整单', tip: '发起或处理预算调整流程' });
+  if (user.canManageReimburse) links.push({ path: '/reimburse/manage', label: '报销单管理', tip: '维护报销单、明细与提交流程' });
+  if (user.canUseWorkflowCenter) links.push({ path: '/workflow/center', label: '审批中心', tip: '集中处理待办、已办和审批轨迹' });
   links.push({ path: '/msg/center', label: '消息中心', tip: '查看驳回、完成和流程提醒消息' });
   return links;
 });
