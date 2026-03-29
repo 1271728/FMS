@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="card">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="card app-card">
       <el-form :model="query" inline>
         <el-form-item label="关键字">
           <el-input v-model="query.keyword" placeholder="单号/标题/项目名" clearable style="width:220px" />
@@ -26,9 +26,9 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="hover" class="card mt16">
+    <el-card shadow="hover" class="card mt16 app-card app-mt16">
       <template #header>
-        <div class="card-head">
+        <div class="card-head app-card-head">
           <span>报销单列表</span>
           <el-button text type="primary" @click="fetchPage(page.pageNo)">刷新</el-button>
         </div>
@@ -524,7 +524,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
 .card { border-radius: 16px; border:none; }
 .mt16 { margin-top:16px; }
 .card-head { display:flex; justify-content:space-between; align-items:center; gap:12px; font-weight:700; }

@@ -47,9 +47,25 @@ export const useUserStore = defineStore("user", {
     isPi: (s) => (s.me?.roles || []).includes("PI"),
     isUnitAdmin: (s) => (s.me?.roles || []).includes("UNIT_ADMIN"),
     isFinance: (s) => (s.me?.roles || []).includes("FINANCE"),
-    canManageProject: (s) => {
+    canViewProjectModule: (s) => {
       const roles = s.me?.roles || [];
       return roles.includes("PI") || roles.includes("ADMIN") || roles.includes("UNIT_ADMIN") || roles.includes("FINANCE");
+    },
+    canViewBudgetOverview: (s) => {
+      const roles = s.me?.roles || [];
+      return roles.includes("PI") || roles.includes("ADMIN") || roles.includes("UNIT_ADMIN") || roles.includes("FINANCE");
+    },
+    canManageBudgetAdjust: (s) => {
+      const roles = s.me?.roles || [];
+      return roles.includes("PI") || roles.includes("ADMIN");
+    },
+    canManageReimburse: (s) => {
+      const roles = s.me?.roles || [];
+      return roles.includes("PI") || roles.includes("ADMIN");
+    },
+    canUseWorkflowCenter: (s) => {
+      const roles = s.me?.roles || [];
+      return roles.includes("ADMIN") || roles.includes("UNIT_ADMIN") || roles.includes("FINANCE");
     },
     defaultHomePath: () => "/home",
     primaryRoleLabel: (s) => {
