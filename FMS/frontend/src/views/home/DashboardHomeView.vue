@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrap">
+  <div class="page-wrap app-page">
     <div class="page-head">
       <div>
         <div class="page-title">工作台</div>
@@ -15,8 +15,8 @@
       </el-card>
     </div>
 
-    <el-card shadow="hover" class="card mt16">
-      <template #header><div class="card-head"><span>快捷入口</span></div></template>
+    <el-card shadow="hover" class="card app-card mt16">
+      <template #header><div class="card-head app-card-head"><span>快捷入口</span></div></template>
       <div class="entry-grid">
         <div v-for="item in quickLinks" :key="item.path" class="entry-item" @click="go(item.path)">
           <div class="entry-name">{{ item.label }}</div>
@@ -40,11 +40,11 @@ const stats = reactive<DashboardStatsResp>({ role: '', unreadCount: 0, cards: []
 const quickLinks = computed(() => {
   const links: Array<{ path: string; label: string; tip: string }> = [];
   if (user.isAdmin) links.push({ path: '/admin/users', label: '用户与权限', tip: '维护组织、账号状态和角色配置' });
-  if (user.canManageProject) links.push({ path: '/project/manage', label: '项目管理', tip: '查看项目、成员与立项状态' });
-  if (user.canManageProject) links.push({ path: '/budget/overview', label: '预算总览', tip: '查看项目预算、余额和执行率' });
-  if (user.canManageProject) links.push({ path: '/budget/adjust', label: '预算调整单', tip: '发起或处理预算调整流程' });
-  if (user.canManageProject) links.push({ path: '/reimburse/manage', label: '报销单管理', tip: '维护报销单、明细与提交流程' });
-  if (user.isAdmin || user.isUnitAdmin || user.isFinance) links.push({ path: '/workflow/center', label: '审批中心', tip: '集中处理待办、已办和审批轨迹' });
+  if (user.canViewProjectModule) links.push({ path: '/project/manage', label: '项目管理', tip: '查看项目、成员与立项状态' });
+  if (user.canViewBudgetOverview) links.push({ path: '/budget/overview', label: '预算总览', tip: '查看项目预算、余额和执行率' });
+  if (user.canManageBudgetAdjust) links.push({ path: '/budget/adjust', label: '预算调整单', tip: '发起或处理预算调整流程' });
+  if (user.canManageReimburse) links.push({ path: '/reimburse/manage', label: '报销单管理', tip: '维护报销单、明细与提交流程' });
+  if (user.canUseWorkflowCenter) links.push({ path: '/workflow/center', label: '审批中心', tip: '集中处理待办、已办和审批轨迹' });
   links.push({ path: '/msg/center', label: '消息中心', tip: '查看驳回、完成和流程提醒消息' });
   return links;
 });
@@ -64,13 +64,11 @@ onMounted(loadStats);
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
 .page-head { display:flex; justify-content:space-between; align-items:center; gap:16px; }
 .page-title { font-size: 24px; font-weight: 700; color:#111827; }
 .page-subtitle { margin-top: 6px; color:#6b7280; }
 .card, .stat-card { border-radius: 16px; border:none; }
 .mt16 { margin-top: 16px; }
-.card-head { font-weight:700; }
 .stats-grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; }
 .stat-label { font-size: 13px; color:#6b7280; }
 .stat-value { margin-top: 12px; font-size: 28px; font-weight: 800; color:#111827; }

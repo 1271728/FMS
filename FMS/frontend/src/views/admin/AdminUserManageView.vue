@@ -1,7 +1,7 @@
 <template>
-  <div class="page-wrap">
+  <div class="page-wrap app-page">
         <div class="layout-grid">
-      <el-card shadow="hover" class="tree-card">
+      <el-card shadow="hover" class="tree-card app-card">
         <template #header>
           <div class="card-head">
             <span>组织树</span>
@@ -35,7 +35,7 @@
       </el-card>
 
       <div class="content-col">
-        <el-card shadow="hover" class="search-card">
+        <el-card shadow="hover" class="search-card app-card">
           <template #header>
             <div class="card-head simple-head">
               <span>筛选条件</span>
@@ -73,7 +73,7 @@
           </el-form>
         </el-card>
 
-        <el-card shadow="hover" class="table-card">
+        <el-card shadow="hover" class="table-card app-card">
           <template #header>
             <div class="card-head">
               <span>用户列表</span>
@@ -614,12 +614,6 @@ loadBaseData().then(loadPage);
 </script>
 
 <style scoped>
-.page-wrap {
-  padding: 20px;
-  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 100%);
-  min-height: 100vh;
-}
-
 .hero-card {
   background: linear-gradient(135deg, #2563eb, #4f46e5);
   color: #fff;

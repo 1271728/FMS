@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="segment-card" v-if="showTeacherTabs || canAuditAny">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="segment-card app-card" v-if="showTeacherTabs || canAuditAny">
       <div class="segment-wrap">
         <div class="segment-title">工作视角</div>
         <div class="segment-list">
@@ -17,7 +17,7 @@
       </div>
     </el-card>
 
-    <el-card shadow="hover" class="search-card">
+    <el-card shadow="hover" class="search-card app-card">
       <template #header>
         <div class="card-head simple-head">
           <span>项目筛选</span>
@@ -58,7 +58,7 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="hover" class="table-card">
+    <el-card shadow="hover" class="table-card app-card">
       <template #header>
         <div class="card-head">
           <span>项目列表</span>
@@ -709,7 +709,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 100%); padding: 20px; }
 .segment-card, .search-card, .table-card { border-radius: 16px; border: none; }
 .segment-card, .search-card, .table-card { margin-top: 16px; }
 .segment-wrap { display: flex; flex-direction: column; gap: 14px; }
