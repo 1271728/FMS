@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrap">
+  <div class="page-wrap app-page">
     <div class="page-head">
       <div>
         <div class="page-title">消息中心</div>
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <el-card shadow="hover" class="card mt16">
+    <el-card shadow="hover" class="card mt16 app-card app-mt16">
       <el-form :inline="true" class="query-row" @submit.prevent>
         <el-form-item label="阅读状态">
           <el-select v-model="query.isRead" clearable style="width: 140px">
@@ -83,7 +83,6 @@ onMounted(() => fetchPage(1));
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
 .page-head { display:flex; justify-content:space-between; align-items:center; gap:16px; }
 .page-title { font-size: 24px; font-weight: 700; color:#111827; }
 .page-subtitle { margin-top:8px; color:#6b7280; line-height:1.8; }
