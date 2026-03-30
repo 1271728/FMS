@@ -456,6 +456,9 @@ function openAudit(row: ReimburseVO) { auditDialog.row = row; auditDialog.action
 async function handleSubmit(row: ReimburseVO) {
   await ElMessageBox.confirm(`确认提交报销单【${row.reimburseNo}】吗？提交后将冻结对应预算余额。`, '提示', { type: 'warning' });
   await apiReimburseSubmit(row.id);
+  row.canSubmit = 0;
+  row.canEdit = 0;
+  row.status = 7;
   ElMessage.success('提交成功');
   await fetchPage(page.pageNo);
 }
