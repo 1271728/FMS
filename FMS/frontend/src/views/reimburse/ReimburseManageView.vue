@@ -60,7 +60,7 @@
             <div class="op-list">
               <el-button text @click="openDetail(row)">详情</el-button>
               <el-button text v-if="row.canEdit === 1" @click="openEdit(row)">编辑</el-button>
-              <el-button text type="primary" v-if="row.canSubmit === 1" @click="handleSubmit(row)">提交</el-button>
+              <el-button text type="primary" v-if="canShowSubmit(row)" @click="handleSubmit(row)">提交</el-button>
               <el-button text type="warning" v-if="row.canWithdraw === 1" @click="handleWithdraw(row)">撤销</el-button>
               <el-button text type="success" v-if="row.canLeaderAudit === 1 || row.canUnitAudit === 1 || row.canFinanceAudit === 1" @click="openAudit(row)">审批</el-button>
             </div>
@@ -283,6 +283,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { apiProjectPage, type ProjectVO } from '@/api/project';
 import { apiProjectBudgetList, type ProjectBudgetVO } from '@/api/budget';
+import { useUserStore } from '@/stores/user';
 import {
   apiReimburseAudit,
   apiReimburseCreate,
@@ -300,6 +301,7 @@ import {
 } from '@/api/reimburse';
 
 const loading = ref(false);
+const user = useUserStore();
 const saving = ref(false);
 const auditSaving = ref(false);
 const page = reactive({ records: [] as ReimburseVO[], total: 0, pageNo: 1, pageSize: 10 });
@@ -361,6 +363,11 @@ function auditStageText(row: ReimburseVO | null) {
   if (row.canUnitAudit === 1) return '二级单位审核';
   if (row.canFinanceAudit === 1) return '财务复核';
   return statusText(row.status);
+}
+function canShowSubmit(row: ReimburseVO) {
+  const mine = Number(user.me?.id || 0);
+  const owner = Number(row.applicantUserId || 0);
+  return row.canSubmit === 1 && mine > 0 && owner > 0 && mine === owner && (row.status === 0 || row.status === 5);
 }
 function recalcItem(row: ReimburseItemReq) {
   const base = Number(row.baseAmount || 0);
