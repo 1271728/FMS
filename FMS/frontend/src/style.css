@@ -37,3 +37,38 @@ textarea,
 select {
   font: inherit;
 }
+
+.app-page {
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%);
+}
+
+.app-card {
+  border: none !important;
+  border-radius: 16px !important;
+}
+
+.app-mt16 {
+  margin-top: 16px;
+}
+
+.app-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.app-query-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+
+@media (max-width: 960px) {
+  .app-page {
+    padding: 14px;
+  }
+}

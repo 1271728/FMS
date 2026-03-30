@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="card">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="card app-card">
       <el-form :model="query" inline>
         <el-form-item label="关键字">
           <el-input v-model="query.keyword" placeholder="单号/标题/项目名" clearable style="width:220px" />
@@ -26,9 +26,9 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="hover" class="card mt16">
+    <el-card shadow="hover" class="card mt16 app-card app-mt16">
       <template #header>
-        <div class="card-head">
+        <div class="card-head app-card-head">
           <span>报销单列表</span>
           <el-button text type="primary" @click="fetchPage(page.pageNo)">刷新</el-button>
         </div>
@@ -60,7 +60,7 @@
             <div class="op-list">
               <el-button text @click="openDetail(row)">详情</el-button>
               <el-button text v-if="row.canEdit === 1" @click="openEdit(row)">编辑</el-button>
-              <el-button text type="primary" v-if="row.canSubmit === 1" @click="handleSubmit(row)">提交</el-button>
+              <el-button text type="primary" v-if="canShowSubmit(row)" @click="handleSubmit(row)">提交</el-button>
               <el-button text type="warning" v-if="row.canWithdraw === 1" @click="handleWithdraw(row)">撤销</el-button>
               <el-button text type="success" v-if="row.canLeaderAudit === 1 || row.canUnitAudit === 1 || row.canFinanceAudit === 1" @click="openAudit(row)">审批</el-button>
             </div>
@@ -283,6 +283,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { apiProjectPage, type ProjectVO } from '@/api/project';
 import { apiProjectBudgetList, type ProjectBudgetVO } from '@/api/budget';
+import { useUserStore } from '@/stores/user';
 import {
   apiReimburseAudit,
   apiReimburseCreate,
@@ -300,6 +301,7 @@ import {
 } from '@/api/reimburse';
 
 const loading = ref(false);
+const user = useUserStore();
 const saving = ref(false);
 const auditSaving = ref(false);
 const page = reactive({ records: [] as ReimburseVO[], total: 0, pageNo: 1, pageSize: 10 });
@@ -361,6 +363,11 @@ function auditStageText(row: ReimburseVO | null) {
   if (row.canUnitAudit === 1) return '二级单位审核';
   if (row.canFinanceAudit === 1) return '财务复核';
   return statusText(row.status);
+}
+function canShowSubmit(row: ReimburseVO) {
+  const mine = Number(user.me?.id || 0);
+  const owner = Number(row.applicantUserId || 0);
+  return row.canSubmit === 1 && mine > 0 && owner > 0 && mine === owner && (row.status === 0 || row.status === 5);
 }
 function recalcItem(row: ReimburseItemReq) {
   const base = Number(row.baseAmount || 0);
@@ -449,6 +456,9 @@ function openAudit(row: ReimburseVO) { auditDialog.row = row; auditDialog.action
 async function handleSubmit(row: ReimburseVO) {
   await ElMessageBox.confirm(`确认提交报销单【${row.reimburseNo}】吗？提交后将冻结对应预算余额。`, '提示', { type: 'warning' });
   await apiReimburseSubmit(row.id);
+  row.canSubmit = 0;
+  row.canEdit = 0;
+  row.status = 7;
   ElMessage.success('提交成功');
   await fetchPage(page.pageNo);
 }
@@ -524,7 +534,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
 .card { border-radius: 16px; border:none; }
 .mt16 { margin-top:16px; }
 .card-head { display:flex; justify-content:space-between; align-items:center; gap:12px; font-weight:700; }

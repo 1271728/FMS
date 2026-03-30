@@ -123,11 +123,11 @@ const currentTitle = computed(() => metaMap[route.path] || "科研经费报销�
 const menuItems = computed(() => {
   const items: Array<{ path: string; label: string }> = [{ path: "/home", label: "首页" }];
   if (user.isAdmin) items.push({ path: "/admin/users", label: "用户与权限" });
-  if (user.canManageProject) items.push({ path: "/project/manage", label: "项目管理" });
-  if (user.canManageProject) items.push({ path: "/budget/overview", label: "预算总览" });
-  if (user.canManageProject) items.push({ path: "/budget/adjust", label: "预算调整单" });
-  if (user.canManageProject) items.push({ path: "/reimburse/manage", label: "报销单管理" });
-  if (user.isAdmin || user.isUnitAdmin || user.isFinance) items.push({ path: "/workflow/center", label: "审批中心" });
+  if (user.canViewProjectModule) items.push({ path: "/project/manage", label: "项目管理" });
+  if (user.canViewBudgetOverview) items.push({ path: "/budget/overview", label: "预算总览" });
+  if (user.canManageBudgetAdjust) items.push({ path: "/budget/adjust", label: "预算调整单" });
+  if (user.canManageReimburse) items.push({ path: "/reimburse/manage", label: "报销单管理" });
+  if (user.canUseWorkflowCenter) items.push({ path: "/workflow/center", label: "审批中心" });
   items.push({ path: "/msg/center", label: "消息中心" });
   return items;
 });

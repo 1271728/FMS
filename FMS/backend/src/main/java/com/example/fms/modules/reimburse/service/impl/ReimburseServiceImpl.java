@@ -377,12 +377,12 @@ public class ReimburseServiceImpl implements ReimburseService {
     }
 
     private boolean canEdit(Long applicantUserId, Integer status, UserSupport.CurrentUser cu) {
-        if (userSupport.hasAdminRole(cu.getRoles())) return true;
         return applicantUserId != null && applicantUserId.equals(cu.getUser().getId()) && (status == ReimburseStatus.DRAFT || status == ReimburseStatus.REJECTED);
     }
 
     private boolean canSubmit(Long applicantUserId, Integer status, UserSupport.CurrentUser cu) {
-        return canEdit(applicantUserId, status, cu);
+        if (status == null || !(status == ReimburseStatus.DRAFT || status == ReimburseStatus.REJECTED)) return false;
+        return applicantUserId != null && applicantUserId.equals(cu.getUser().getId());
     }
 
     private boolean canLeaderAudit(Long applicantUserId, Long principalUserId, Integer status, UserSupport.CurrentUser cu) {
