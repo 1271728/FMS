@@ -1,15 +1,24 @@
 package com.example.fms.modules.reimburse.controller;
 
 import com.example.fms.common.api.ApiResponse;
+import com.example.fms.common.exception.BizException;
 import com.example.fms.common.api.PageResult;
 import com.example.fms.modules.reimburse.dto.*;
+import com.example.fms.modules.shared.support.UserSupport;
 import com.example.fms.modules.reimburse.service.ReimburseService;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,9 +32,11 @@ import java.util.UUID;
 public class ReimburseController {
 
     private final ReimburseService reimburseService;
+    private final UserSupport userSupport;
 
-    public ReimburseController(ReimburseService reimburseService) {
+    public ReimburseController(ReimburseService reimburseService, UserSupport userSupport) {
         this.reimburseService = reimburseService;
+        this.userSupport = userSupport;
     }
 
     @PostMapping("/page")
@@ -88,5 +99,25 @@ public class ReimburseController {
         vo.setFileUrl("/uploads/reimburse/" + dateDir + "/" + storage);
         vo.setFileSize(file.getSize());
         return ApiResponse.ok(vo);
+    }
+
+    @GetMapping("/file/download")
+    public ResponseEntity<Resource> download(@RequestParam("fileUrl") String fileUrl,
+                                             @RequestParam(value = "name", required = false) String name) throws IOException {
+        userSupport.currentUser();
+        String normalized = StringUtils.cleanPath(fileUrl == null ? "" : fileUrl.trim());
+        if (!normalized.startsWith("/uploads/reimburse/")) throw BizException.badRequest("文件路径非法");
+        Path uploadsRoot = Paths.get(System.getProperty("user.dir"), "uploads").toAbsolutePath().normalize();
+        Path target = uploadsRoot.resolve(normalized.replaceFirst("^/uploads/", "")).normalize();
+        if (!target.startsWith(uploadsRoot)) throw BizException.badRequest("文件路径非法");
+        if (!Files.exists(target) || !Files.isRegularFile(target)) throw BizException.notFound("文件不存在");
+        Resource resource = new UrlResource(target.toUri());
+        String filename = StringUtils.hasText(name) ? name.trim() : target.getFileName().toString();
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.name()).replace("+", "%20");
+        MediaType mediaType = MediaTypeFactory.getMediaType(filename).orElse(MediaType.APPLICATION_OCTET_STREAM);
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
+                .body(resource);
     }
 }

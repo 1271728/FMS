@@ -21,7 +21,7 @@
         <el-form-item>
           <el-button type="primary" @click="fetchPage(1)">查询</el-button>
           <el-button @click="resetQuery">重置</el-button>
-          <el-button type="primary" @click="openCreate">新增报销单</el-button>
+          <el-button v-if="canCreateReimburse" type="primary" @click="openCreate">新增报销单</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -111,7 +111,7 @@
           <div v-for="(item, index) in editDialog.form.attachments" :key="`${item.fileUrl}-${index}`" class="attach-item">
             <div class="attach-main">
               <el-tag size="small">{{ attachmentLabel(item.fileCategory) }}</el-tag>
-              <a :href="item.fileUrl" target="_blank" class="attach-link">{{ item.originalName || item.fileUrl }}</a>
+              <a :href="attachmentDownloadUrl(item)" target="_blank" rel="noopener" class="attach-link">{{ item.originalName || item.fileUrl }}</a>
             </div>
             <el-button text type="danger" @click="removeAttachment(index)">删除</el-button>
           </div>
@@ -217,7 +217,7 @@
         <div v-if="detailDrawer.data.attachments?.length" class="drawer-attach-list">
           <div v-for="(item, index) in detailDrawer.data.attachments" :key="`${item.fileUrl}-${index}`" class="drawer-attach-item">
             <span>{{ attachmentLabel(item.fileCategory) }}</span>
-            <a :href="item.fileUrl" target="_blank">{{ item.originalName || item.fileUrl }}</a>
+            <a :href="attachmentDownloadUrl(item)" target="_blank" rel="noopener">{{ item.originalName || item.fileUrl }}</a>
           </div>
         </div>
         <el-empty v-else description="暂无附件" :image-size="70" />
@@ -340,6 +340,7 @@ const detailDrawer = reactive({ visible: false, data: null as ReimburseDetailVO 
 const auditDialog = reactive({ visible: false, row: null as ReimburseVO | null, action: 'pass' as 'pass' | 'reject', comment: '' });
 const formTotal = computed(() => editDialog.form.items.reduce((sum, item) => sum + Number(item.amount || 0), 0));
 const hasTravelSubsidyRows = computed(() => editDialog.form.items.some((item) => isTravelSubject(item.subjectId)));
+const canCreateReimburse = computed(() => user.hasAnyRole(['PI', 'ADMIN']));
 
 function money(v?: number | null) {
   const n = Number(v || 0);
@@ -356,6 +357,13 @@ function attachmentLabel(type?: string) {
   if (type === 'INVOICE') return '发票';
   if (type === 'VOUCHER') return '凭证';
   return type || '附件';
+}
+function attachmentDownloadUrl(item: ReimburseAttachmentReq) {
+  const source = (item.fileUrl || '').trim();
+  if (!source) return '#';
+  if (/^https?:\/\//i.test(source)) return source;
+  const name = encodeURIComponent(item.originalName || '附件');
+  return `/api/reimburse/file/download?fileUrl=${encodeURIComponent(source)}&name=${name}`;
 }
 function auditStageText(row: ReimburseVO | null) {
   if (!row) return '-';
