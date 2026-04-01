@@ -113,7 +113,7 @@ public class ReimburseController {
         if (!Files.exists(target) || !Files.isRegularFile(target)) throw BizException.notFound("文件不存在");
         Resource resource = new UrlResource(target.toUri());
         String filename = StringUtils.hasText(name) ? name.trim() : target.getFileName().toString();
-        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.name()).replace("+", "%20");
         MediaType mediaType = MediaTypeFactory.getMediaType(filename).orElse(MediaType.APPLICATION_OCTET_STREAM);
         return ResponseEntity.ok()
                 .contentType(mediaType)
