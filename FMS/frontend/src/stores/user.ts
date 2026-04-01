@@ -61,7 +61,7 @@ export const useUserStore = defineStore("user", {
     },
     canManageReimburse: (s) => {
       const roles = s.me?.roles || [];
-      return roles.includes("PI") || roles.includes("ADMIN");
+      return roles.includes("PI") || roles.includes("ADMIN") || roles.includes("UNIT_ADMIN") || roles.includes("FINANCE");
     },
     canUseWorkflowCenter: (s) => {
       const roles = s.me?.roles || [];
