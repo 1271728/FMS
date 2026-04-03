@@ -30,7 +30,7 @@ public interface ProjectAuditLogMapper {
                     "l.actor_user_id AS operatorUserId, u.real_name AS operatorName, l.comment, " +
                     "DATE_FORMAT(l.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt " +
                     "FROM wf_log l LEFT JOIN sys_user u ON u.id = l.actor_user_id " +
-                    "WHERE l.biz_type = 'PROJECT' AND l.biz_id = #{projectId} AND l.node_code != 'CONTENT' " +
+                    "WHERE l.biz_type = 'PROJECT' AND l.biz_id = #{projectId} AND l.node_code NOT IN ('CONTENT') " +
                     "ORDER BY l.id ASC";
         }
     }

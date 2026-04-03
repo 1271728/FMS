@@ -29,7 +29,7 @@ public interface ReimburseAuditLogMapper {
                     "l.actor_user_id AS operatorUserId, su.real_name AS operatorName, l.comment, " +
                     "DATE_FORMAT(l.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt " +
                     "FROM wf_log l LEFT JOIN sys_user su ON su.id = l.actor_user_id " +
-                    "WHERE l.biz_type = 'REIMB' AND l.biz_id = #{reimburseId} AND l.node_code != 'CONTENT' " +
+                    "WHERE l.biz_type = 'REIMB' AND l.biz_id = #{reimburseId} AND l.node_code NOT IN ('CONTENT') " +
                     "ORDER BY l.id ASC";
         }
     }
