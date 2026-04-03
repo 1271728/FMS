@@ -1,11 +1,11 @@
 package com.example.fms.modules.reimburse.controller;
 
 import com.example.fms.common.api.ApiResponse;
-import com.example.fms.common.exception.BizException;
 import com.example.fms.common.api.PageResult;
+import com.example.fms.common.exception.BizException;
 import com.example.fms.modules.reimburse.dto.*;
-import com.example.fms.modules.shared.support.UserSupport;
 import com.example.fms.modules.reimburse.service.ReimburseService;
+import com.example.fms.modules.shared.support.UserSupport;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -87,7 +87,7 @@ public class ReimburseController {
                                                  @RequestParam(value = "fileCategory", required = false) String fileCategory) throws IOException {
         if (file == null || file.isEmpty()) return ApiResponse.fail(400, "请选择文件");
         String dateDir = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        Path root = resolveUploadsRoots().get(0).resolve("reimburse").resolve(dateDir);
+        Path root = choosePrimaryUploadsRoot().resolve("reimburse").resolve(dateDir);
         Files.createDirectories(root);
         String original = StringUtils.cleanPath(file.getOriginalFilename() == null ? "file" : file.getOriginalFilename());
         String ext = "";
@@ -135,18 +135,30 @@ public class ReimburseController {
         return null;
     }
 
+    private Path choosePrimaryUploadsRoot() {
+        List<Path> roots = resolveUploadsRoots();
+        for (Path root : roots) {
+            if (Files.exists(root)) return root;
+        }
+        return roots.get(0);
+    }
+
     private List<Path> resolveUploadsRoots() {
         Path userDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
         Set<Path> candidates = new LinkedHashSet<>();
-        candidates.add(userDir.resolve("uploads").normalize());
-        candidates.add(userDir.resolve("backend").resolve("uploads").normalize());
-
-        Path parent = userDir.getParent();
-        if (parent != null) {
-            candidates.add(parent.resolve("uploads").normalize());
-            candidates.add(parent.resolve("backend").resolve("uploads").normalize());
+        List<Path> bases = new ArrayList<>();
+        bases.add(userDir);
+        if (userDir.getParent() != null) bases.add(userDir.getParent().normalize());
+        if (userDir.getParent() != null && userDir.getParent().getParent() != null) {
+            bases.add(userDir.getParent().getParent().normalize());
         }
 
+        for (Path base : bases) {
+            candidates.add(base.resolve("uploads").normalize());
+            candidates.add(base.resolve("backend").resolve("uploads").normalize());
+            candidates.add(base.resolve("FMS").resolve("uploads").normalize());
+            candidates.add(base.resolve("FMS").resolve("backend").resolve("uploads").normalize());
+        }
         return new ArrayList<>(candidates);
     }
 }

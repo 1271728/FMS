@@ -17,16 +17,20 @@ public class StaticResourceConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         Path userDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
         Set<String> locations = new LinkedHashSet<>();
-        locations.add(userDir.resolve("uploads").toUri().toString());
-        locations.add(userDir.resolve("backend").resolve("uploads").toUri().toString());
-
-        Path parent = userDir.getParent();
-        if (parent != null) {
-            locations.add(parent.resolve("uploads").toUri().toString());
-            locations.add(parent.resolve("backend").resolve("uploads").toUri().toString());
+        List<Path> bases = new ArrayList<>();
+        bases.add(userDir);
+        if (userDir.getParent() != null) bases.add(userDir.getParent().normalize());
+        if (userDir.getParent() != null && userDir.getParent().getParent() != null) {
+            bases.add(userDir.getParent().getParent().normalize());
         }
 
-        List<String> resourceLocations = new ArrayList<>(locations);
-        registry.addResourceHandler("/uploads/**").addResourceLocations(resourceLocations.toArray(new String[0]));
+        for (Path base : bases) {
+            locations.add(base.resolve("uploads").toUri().toString());
+            locations.add(base.resolve("backend").resolve("uploads").toUri().toString());
+            locations.add(base.resolve("FMS").resolve("uploads").toUri().toString());
+            locations.add(base.resolve("FMS").resolve("backend").resolve("uploads").toUri().toString());
+        }
+
+        registry.addResourceHandler("/uploads/**").addResourceLocations(locations.toArray(new String[0]));
     }
 }
