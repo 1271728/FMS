@@ -26,7 +26,9 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -135,10 +137,16 @@ public class ReimburseController {
 
     private List<Path> resolveUploadsRoots() {
         Path userDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
-        List<Path> roots = new ArrayList<>();
-        roots.add(userDir.resolve("uploads").normalize());
+        Set<Path> candidates = new LinkedHashSet<>();
+        candidates.add(userDir.resolve("uploads").normalize());
+        candidates.add(userDir.resolve("backend").resolve("uploads").normalize());
+
         Path parent = userDir.getParent();
-        if (parent != null) roots.add(parent.resolve("uploads").normalize());
-        return roots;
+        if (parent != null) {
+            candidates.add(parent.resolve("uploads").normalize());
+            candidates.add(parent.resolve("backend").resolve("uploads").normalize());
+        }
+
+        return new ArrayList<>(candidates);
     }
 }
