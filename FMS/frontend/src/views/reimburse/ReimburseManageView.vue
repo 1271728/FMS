@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="card">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="card app-card">
       <el-form :model="query" inline>
         <el-form-item label="关键字">
           <el-input v-model="query.keyword" placeholder="单号/标题/项目名" clearable style="width:220px" />
@@ -21,14 +21,14 @@
         <el-form-item>
           <el-button type="primary" @click="fetchPage(1)">查询</el-button>
           <el-button @click="resetQuery">重置</el-button>
-          <el-button type="primary" @click="openCreate">新增报销单</el-button>
+          <el-button v-if="canCreateReimburse" type="primary" @click="openCreate">新增报销单</el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <el-card shadow="hover" class="card mt16">
+    <el-card shadow="hover" class="card mt16 app-card app-mt16">
       <template #header>
-        <div class="card-head">
+        <div class="card-head app-card-head">
           <span>报销单列表</span>
           <el-button text type="primary" @click="fetchPage(page.pageNo)">刷新</el-button>
         </div>
@@ -60,7 +60,7 @@
             <div class="op-list">
               <el-button text @click="openDetail(row)">详情</el-button>
               <el-button text v-if="row.canEdit === 1" @click="openEdit(row)">编辑</el-button>
-              <el-button text type="primary" v-if="row.canSubmit === 1" @click="handleSubmit(row)">提交</el-button>
+              <el-button text type="primary" v-if="canShowSubmit(row)" @click="handleSubmit(row)">提交</el-button>
               <el-button text type="warning" v-if="row.canWithdraw === 1" @click="handleWithdraw(row)">撤销</el-button>
               <el-button text type="success" v-if="row.canLeaderAudit === 1 || row.canUnitAudit === 1 || row.canFinanceAudit === 1" @click="openAudit(row)">审批</el-button>
             </div>
@@ -111,7 +111,7 @@
           <div v-for="(item, index) in editDialog.form.attachments" :key="`${item.fileUrl}-${index}`" class="attach-item">
             <div class="attach-main">
               <el-tag size="small">{{ attachmentLabel(item.fileCategory) }}</el-tag>
-              <a :href="item.fileUrl" target="_blank" class="attach-link">{{ item.originalName || item.fileUrl }}</a>
+              <a :href="attachmentDownloadUrl(item)" target="_blank" rel="noopener" class="attach-link">{{ item.originalName || item.fileUrl }}</a>
             </div>
             <el-button text type="danger" @click="removeAttachment(index)">删除</el-button>
           </div>
@@ -120,14 +120,15 @@
         <div class="section-head mt12">
           <div>
             <div class="section-title">报销明细</div>
-            <div class="section-tip">差旅费支持补助计算：总额 = 基础金额 + 差旅天数 × 每日补助。</div>
+            <div class="section-tip" v-if="hasTravelSubsidyRows">差旅类科目支持补助计算：总额 = 基础金额 + 差旅天数 × 每日补助。</div>
+            <div class="section-tip" v-else>当前未选择差旅类科目，仅需填写基础金额。</div>
           </div>
           <el-button type="primary" plain @click="addItem">新增明细</el-button>
         </div>
         <el-table :data="editDialog.form.items" border>
           <el-table-column label="预算科目" min-width="180">
             <template #default="{ row }">
-              <el-select v-model="row.subjectId" filterable placeholder="选择预算科目" style="width:100%">
+              <el-select v-model="row.subjectId" filterable placeholder="选择预算科目" style="width:100%" @change="handleSubjectChange(row)">
                 <el-option v-for="b in budgetOptions" :key="b.subjectId" :label="`${b.subjectCode}｜${b.subjectName}（可用${money(b.availableAmount)}）`" :value="b.subjectId" />
               </el-select>
             </template>
@@ -147,18 +148,36 @@
               <el-input-number v-model="row.baseAmount" :min="0" :precision="2" :step="100" style="width:100%" @change="recalcItem(row)" />
             </template>
           </el-table-column>
-          <el-table-column label="差旅天数" width="120">
+          <el-table-column v-if="hasTravelSubsidyRows" label="差旅天数" width="120">
             <template #default="{ row }">
-              <el-input-number v-model="row.travelDays" :min="0" :precision="0" :step="1" style="width:100%" @change="recalcItem(row)" />
+              <el-input-number
+                v-if="isTravelSubject(row.subjectId)"
+                v-model="row.travelDays"
+                :min="0"
+                :precision="0"
+                :step="1"
+                style="width:100%"
+                @change="recalcItem(row)"
+              />
+              <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="每日补助" width="140">
+          <el-table-column v-if="hasTravelSubsidyRows" label="每日补助" width="140">
             <template #default="{ row }">
-              <el-input-number v-model="row.subsidyPerDay" :min="0" :precision="2" :step="10" style="width:100%" @change="recalcItem(row)" />
+              <el-input-number
+                v-if="isTravelSubject(row.subjectId)"
+                v-model="row.subsidyPerDay"
+                :min="0"
+                :precision="2"
+                :step="10"
+                style="width:100%"
+                @change="recalcItem(row)"
+              />
+              <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="补助金额" width="130">
-            <template #default="{ row }">{{ money(row.subsidyAmount) }}</template>
+          <el-table-column v-if="hasTravelSubsidyRows" label="补助金额" width="130">
+            <template #default="{ row }">{{ isTravelSubject(row.subjectId) ? money(row.subsidyAmount) : '-' }}</template>
           </el-table-column>
           <el-table-column label="总金额" width="130">
             <template #default="{ row }">{{ money(row.amount) }}</template>
@@ -198,7 +217,7 @@
         <div v-if="detailDrawer.data.attachments?.length" class="drawer-attach-list">
           <div v-for="(item, index) in detailDrawer.data.attachments" :key="`${item.fileUrl}-${index}`" class="drawer-attach-item">
             <span>{{ attachmentLabel(item.fileCategory) }}</span>
-            <a :href="item.fileUrl" target="_blank">{{ item.originalName || item.fileUrl }}</a>
+            <a :href="attachmentDownloadUrl(item)" target="_blank" rel="noopener">{{ item.originalName || item.fileUrl }}</a>
           </div>
         </div>
         <el-empty v-else description="暂无附件" :image-size="70" />
@@ -264,6 +283,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { apiProjectPage, type ProjectVO } from '@/api/project';
 import { apiProjectBudgetList, type ProjectBudgetVO } from '@/api/budget';
+import { useUserStore } from '@/stores/user';
 import {
   apiReimburseAudit,
   apiReimburseCreate,
@@ -281,6 +301,7 @@ import {
 } from '@/api/reimburse';
 
 const loading = ref(false);
+const user = useUserStore();
 const saving = ref(false);
 const auditSaving = ref(false);
 const page = reactive({ records: [] as ReimburseVO[], total: 0, pageNo: 1, pageSize: 10 });
@@ -318,6 +339,8 @@ const editDialog = reactive({
 const detailDrawer = reactive({ visible: false, data: null as ReimburseDetailVO | null });
 const auditDialog = reactive({ visible: false, row: null as ReimburseVO | null, action: 'pass' as 'pass' | 'reject', comment: '' });
 const formTotal = computed(() => editDialog.form.items.reduce((sum, item) => sum + Number(item.amount || 0), 0));
+const hasTravelSubsidyRows = computed(() => editDialog.form.items.some((item) => isTravelSubject(item.subjectId)));
+const canCreateReimburse = computed(() => user.hasAnyRole(['PI', 'ADMIN']));
 
 function money(v?: number | null) {
   const n = Number(v || 0);
@@ -335,6 +358,13 @@ function attachmentLabel(type?: string) {
   if (type === 'VOUCHER') return '凭证';
   return type || '附件';
 }
+function attachmentDownloadUrl(item: ReimburseAttachmentReq) {
+  const source = (item.fileUrl || '').trim();
+  if (!source) return '#';
+  if (/^https?:\/\//i.test(source)) return source;
+  const name = encodeURIComponent(item.originalName || '附件');
+  return `/api/reimburse/file/download?fileUrl=${encodeURIComponent(source)}&name=${name}`;
+}
 function auditStageText(row: ReimburseVO | null) {
   if (!row) return '-';
   if (row.canLeaderAudit === 1) return '组长审批';
@@ -342,13 +372,33 @@ function auditStageText(row: ReimburseVO | null) {
   if (row.canFinanceAudit === 1) return '财务复核';
   return statusText(row.status);
 }
+function canShowSubmit(row: ReimburseVO) {
+  const mine = Number(user.me?.id || 0);
+  const owner = Number(row.applicantUserId || 0);
+  return row.canSubmit === 1 && mine > 0 && owner > 0 && mine === owner && (row.status === 0 || row.status === 5);
+}
 function recalcItem(row: ReimburseItemReq) {
   const base = Number(row.baseAmount || 0);
+  if (!isTravelSubject(row.subjectId)) {
+    row.travelDays = null;
+    row.subsidyPerDay = null;
+    row.subsidyAmount = null;
+    row.amount = Number(base.toFixed(2));
+    return;
+  }
   const days = Number(row.travelDays || 0);
   const perDay = Number(row.subsidyPerDay || 0);
   const subsidy = days > 0 && perDay > 0 ? Number((days * perDay).toFixed(2)) : 0;
   row.subsidyAmount = subsidy || null;
   row.amount = Number((base + subsidy).toFixed(2));
+}
+function isTravelSubject(subjectId?: number | null) {
+  if (!subjectId) return false;
+  const subjectCode = (budgetOptions.value.find((item) => item.subjectId === subjectId)?.subjectCode || '').toUpperCase();
+  return subjectCode === 'TRAVEL' || subjectCode.startsWith('TRAVEL_');
+}
+function handleSubjectChange(row: ReimburseItemReq) {
+  recalcItem(row);
 }
 
 async function loadProjects() {
@@ -406,6 +456,7 @@ async function openEdit(row: ReimburseVO) {
   })) : [blankItem()];
   editDialog.visible = true;
   await handleFormProjectChange();
+  editDialog.form.items.forEach(recalcItem);
 }
 async function openDetail(row: ReimburseVO) { detailDrawer.data = await apiReimburseDetail(row.id); detailDrawer.visible = true; }
 function openAudit(row: ReimburseVO) { auditDialog.row = row; auditDialog.action = 'pass'; auditDialog.comment = ''; auditDialog.visible = true; }
@@ -413,6 +464,9 @@ function openAudit(row: ReimburseVO) { auditDialog.row = row; auditDialog.action
 async function handleSubmit(row: ReimburseVO) {
   await ElMessageBox.confirm(`确认提交报销单【${row.reimburseNo}】吗？提交后将冻结对应预算余额。`, '提示', { type: 'warning' });
   await apiReimburseSubmit(row.id);
+  row.canSubmit = 0;
+  row.canEdit = 0;
+  row.status = 7;
   ElMessage.success('提交成功');
   await fetchPage(page.pageNo);
 }
@@ -488,7 +542,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%); padding: 20px; }
 .card { border-radius: 16px; border:none; }
 .mt16 { margin-top:16px; }
 .card-head { display:flex; justify-content:space-between; align-items:center; gap:12px; font-weight:700; }

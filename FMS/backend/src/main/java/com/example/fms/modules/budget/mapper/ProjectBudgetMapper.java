@@ -33,10 +33,10 @@ public interface ProjectBudgetMapper {
     @Update("UPDATE rf_project_budget SET adjusted_amount = adjusted_amount - #{amount}, updated_at = NOW() WHERE project_id = #{projectId} AND subject_id = #{subjectId} AND (approved_amount + adjusted_amount - used_amount) >= #{amount}")
     int freeze(@Param("projectId") Long projectId, @Param("subjectId") Long subjectId, @Param("amount") BigDecimal amount);
 
-    @Update("UPDATE rf_project_budget SET adjusted_amount = adjusted_amount + #{amount}, updated_at = NOW() WHERE project_id = #{projectId} AND subject_id = #{subjectId} AND adjusted_amount &lt;= (0 - #{amount})")
+    @Update("UPDATE rf_project_budget SET adjusted_amount = adjusted_amount + #{amount}, updated_at = NOW() WHERE project_id = #{projectId} AND subject_id = #{subjectId} AND (adjusted_amount < (0 - #{amount}) OR adjusted_amount = (0 - #{amount}))")
     int releaseFrozen(@Param("projectId") Long projectId, @Param("subjectId") Long subjectId, @Param("amount") BigDecimal amount);
 
-    @Update("UPDATE rf_project_budget SET adjusted_amount = adjusted_amount + #{amount}, used_amount = used_amount + #{amount}, updated_at = NOW() WHERE project_id = #{projectId} AND subject_id = #{subjectId} AND adjusted_amount &lt;= (0 - #{amount})")
+    @Update("UPDATE rf_project_budget SET adjusted_amount = adjusted_amount + #{amount}, used_amount = used_amount + #{amount}, updated_at = NOW() WHERE project_id = #{projectId} AND subject_id = #{subjectId} AND (adjusted_amount < (0 - #{amount}) OR adjusted_amount = (0 - #{amount}))")
     int consumeFrozen(@Param("projectId") Long projectId, @Param("subjectId") Long subjectId, @Param("amount") BigDecimal amount);
 
     @Select("SELECT COALESCE(SUM(approved_amount), 0) FROM rf_project_budget WHERE project_id = #{projectId}")

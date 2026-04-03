@@ -2,20 +2,33 @@ package com.example.fms.modules.reimburse.controller;
 
 import com.example.fms.common.api.ApiResponse;
 import com.example.fms.common.api.PageResult;
+import com.example.fms.common.exception.BizException;
 import com.example.fms.modules.reimburse.dto.*;
 import com.example.fms.modules.reimburse.service.ReimburseService;
+import com.example.fms.modules.shared.support.UserSupport;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -23,9 +36,11 @@ import java.util.UUID;
 public class ReimburseController {
 
     private final ReimburseService reimburseService;
+    private final UserSupport userSupport;
 
-    public ReimburseController(ReimburseService reimburseService) {
+    public ReimburseController(ReimburseService reimburseService, UserSupport userSupport) {
         this.reimburseService = reimburseService;
+        this.userSupport = userSupport;
     }
 
     @PostMapping("/page")
@@ -72,7 +87,7 @@ public class ReimburseController {
                                                  @RequestParam(value = "fileCategory", required = false) String fileCategory) throws IOException {
         if (file == null || file.isEmpty()) return ApiResponse.fail(400, "请选择文件");
         String dateDir = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        Path root = Paths.get(System.getProperty("user.dir"), "uploads", "reimburse", dateDir);
+        Path root = choosePrimaryUploadsRoot().resolve("reimburse").resolve(dateDir);
         Files.createDirectories(root);
         String original = StringUtils.cleanPath(file.getOriginalFilename() == null ? "file" : file.getOriginalFilename());
         String ext = "";
@@ -88,5 +103,62 @@ public class ReimburseController {
         vo.setFileUrl("/uploads/reimburse/" + dateDir + "/" + storage);
         vo.setFileSize(file.getSize());
         return ApiResponse.ok(vo);
+    }
+
+    @GetMapping("/file/download")
+    public ResponseEntity<Resource> download(@RequestParam("fileUrl") String fileUrl,
+                                             @RequestParam(value = "name", required = false) String name) throws IOException {
+        userSupport.currentUser();
+        String normalized = StringUtils.cleanPath(fileUrl == null ? "" : fileUrl.trim());
+        if (!normalized.startsWith("/uploads/reimburse/")) throw BizException.badRequest("文件路径非法");
+
+        String relativePath = normalized.replaceFirst("^/uploads/", "");
+        Path target = resolveExistingFile(relativePath);
+        if (target == null) throw BizException.notFound("文件不存在");
+
+        Resource resource = new UrlResource(target.toUri());
+        String filename = StringUtils.hasText(name) ? name.trim() : target.getFileName().toString();
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.name()).replace("+", "%20");
+        MediaType mediaType = MediaTypeFactory.getMediaType(filename).orElse(MediaType.APPLICATION_OCTET_STREAM);
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
+                .body(resource);
+    }
+
+    private Path resolveExistingFile(String relativePath) {
+        for (Path uploadsRoot : resolveUploadsRoots()) {
+            Path candidate = uploadsRoot.resolve(relativePath).normalize();
+            if (!candidate.startsWith(uploadsRoot)) continue;
+            if (Files.exists(candidate) && Files.isRegularFile(candidate)) return candidate;
+        }
+        return null;
+    }
+
+    private Path choosePrimaryUploadsRoot() {
+        List<Path> roots = resolveUploadsRoots();
+        for (Path root : roots) {
+            if (Files.exists(root)) return root;
+        }
+        return roots.get(0);
+    }
+
+    private List<Path> resolveUploadsRoots() {
+        Path userDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+        Set<Path> candidates = new LinkedHashSet<>();
+        List<Path> bases = new ArrayList<>();
+        bases.add(userDir);
+        if (userDir.getParent() != null) bases.add(userDir.getParent().normalize());
+        if (userDir.getParent() != null && userDir.getParent().getParent() != null) {
+            bases.add(userDir.getParent().getParent().normalize());
+        }
+
+        for (Path base : bases) {
+            candidates.add(base.resolve("uploads").normalize());
+            candidates.add(base.resolve("backend").resolve("uploads").normalize());
+            candidates.add(base.resolve("FMS").resolve("uploads").normalize());
+            candidates.add(base.resolve("FMS").resolve("backend").resolve("uploads").normalize());
+        }
+        return new ArrayList<>(candidates);
     }
 }

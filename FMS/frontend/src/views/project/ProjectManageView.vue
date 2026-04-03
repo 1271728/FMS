@@ -1,6 +1,6 @@
 <template>
-  <div class="page-wrap">
-    <el-card shadow="hover" class="segment-card" v-if="showTeacherTabs || canAuditAny">
+  <div class="page-wrap app-page">
+    <el-card shadow="hover" class="segment-card app-card" v-if="showTeacherTabs || canAuditAny">
       <div class="segment-wrap">
         <div class="segment-title">工作视角</div>
         <div class="segment-list">
@@ -17,7 +17,7 @@
       </div>
     </el-card>
 
-    <el-card shadow="hover" class="search-card">
+    <el-card shadow="hover" class="search-card app-card">
       <template #header>
         <div class="card-head simple-head">
           <span>项目筛选</span>
@@ -58,7 +58,7 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="hover" class="table-card">
+    <el-card shadow="hover" class="table-card app-card">
       <template #header>
         <div class="card-head">
           <span>项目列表</span>
@@ -186,16 +186,27 @@
         <div class="section-head">
           <div>
             <div class="section-title">预算分配</div>
-            <div class="section-tip">提交项目审批时，预算分配会一并校验。分配合计建议等于预算总额。</div>
+            <div class="section-tip">按科研预算科目一次性分配金额。提交项目审批时，预算分配将一并校验且需与预算总额一致。</div>
           </div>
-          <el-button type="primary" plain @click="addBudgetLine">新增预算分配</el-button>
+          <el-button plain @click="resetBudgetAmounts">清空分配金额</el-button>
         </div>
 
         <el-table :data="editDialog.form.budgetLines" border class="budget-table">
-          <el-table-column label="预算科目" min-width="260">
+          <el-table-column label="预算科目编码" width="140">
             <template #default="{ row }">
-              <el-select v-model="row.subjectId" filterable clearable placeholder="请选择预算科目" style="width:100%">
-                <el-option v-for="item in subjectOptions" :key="item.id" :label="`${item.code}｜${item.name}`" :value="item.id" />
+              <el-tag effect="plain" type="info">{{ row.subjectCode }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="预算科目名称" min-width="260">
+            <template #default="{ row }">
+              <div class="subject-name-cell">{{ row.subjectName }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="控制方式" width="120" align="center">
+            <template #default="{ row }">
+              <el-select v-model="row.controlMode" size="small" style="width:100%">
+                <el-option label="禁止超支" value="禁止超支" />
+                <el-option label="不控制" value="不控制" />
               </el-select>
             </template>
           </el-table-column>
@@ -204,9 +215,9 @@
               <el-input-number v-model="row.approvedAmount" :min="0" :precision="2" :step="100" style="width:100%" />
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="90" fixed="right">
-            <template #default="{ $index }">
-              <el-button text type="danger" @click="removeBudgetLine($index)">删除</el-button>
+          <el-table-column label="占比" width="120" align="right">
+            <template #default="{ row }">
+              {{ percentage(row.approvedAmount) }}
             </template>
           </el-table-column>
         </el-table>
@@ -342,13 +353,16 @@ const { roles } = storeToRefs(userStore);
 const editFormRef = ref<FormInstance>();
 
 type ScopeKey = 'all' | 'lead' | 'joined' | 'todo';
+type ControlMode = '禁止超支' | '不控制';
 
 const loading = ref(false);
 const tableData = ref<ProjectVO[]>([]);
 const pager = reactive({ pageNo: 1, pageSize: 10, total: 0 });
 const activeScope = ref<ScopeKey>('all');
 const searchForm = reactive<{ keyword: string; status: number | null; todoOnly: boolean }>({ keyword: '', status: null, todoOnly: false });
-const subjectOptions = ref<Array<{ id: number; code: string; name: string }>>([]);
+type SubjectOption = { id: number; code: string; name: string };
+type EditableBudgetLine = ProjectBudgetLineReq & { subjectCode: string; subjectName: string; controlMode: ControlMode };
+const subjectOptions = ref<SubjectOption[]>([]);
 
 const editDialog = reactive({
   visible: false,
@@ -363,7 +377,7 @@ const editDialog = reactive({
     endDate: '',
     totalBudget: undefined as number | undefined,
     description: '',
-    budgetLines: [] as ProjectBudgetLineReq[],
+    budgetLines: [] as EditableBudgetLine[],
   },
 });
 
@@ -409,16 +423,19 @@ const allocatedTotal = computed(() => editDialog.form.budgetLines.reduce((sum, i
 const allocatedDiff = computed(() => Number(editDialog.form.totalBudget || 0) - allocatedTotal.value);
 const allocatedDiffClass = computed(() => Math.abs(allocatedDiff.value) < 0.005 ? 'budget-ok' : 'budget-warn');
 
-function flattenSubjects(list: BudgetSubjectNode[], out: Array<{ id: number; code: string; name: string }>) {
+function flattenSubjects(list: BudgetSubjectNode[], out: SubjectOption[]) {
   for (const item of list || []) {
-    if (item.enabled !== 0) out.push({ id: item.id, code: item.code, name: item.name });
+    const enabledChildren = (item.children || []).filter((child) => child.enabled !== 0);
+    const isLeaf = enabledChildren.length === 0;
+    const isRoot = item.code === 'ROOT';
+    if (item.enabled !== 0 && isLeaf && !isRoot) out.push({ id: item.id, code: item.code, name: item.name });
     if (item.children?.length) flattenSubjects(item.children, out);
   }
 }
 
 async function loadSubjectOptions() {
   const tree = await apiBudgetSubjectTree();
-  const out: Array<{ id: number; code: string; name: string }> = [];
+  const out: SubjectOption[] = [];
   flattenSubjects(tree || [], out);
   const seen = new Set<number>();
   subjectOptions.value = out.filter((item) => !seen.has(item.id) && seen.add(item.id));
@@ -476,6 +493,15 @@ function money(value?: number | null) {
   if (value === null || value === undefined || value === ('' as never)) return '-';
   return `¥ ${Number(value).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
+function percentage(value?: number | null) {
+  const total = Number(editDialog.form.totalBudget || 0);
+  const amount = Number(value || 0);
+  if (total <= 0 || amount <= 0) return '-';
+  return `${((amount / total) * 100).toFixed(2)}%`;
+}
+function defaultControlMode(value?: number | null): ControlMode {
+  return Number(value || 0) > 0 ? '禁止超支' : '不控制';
+}
 
 function changeScope(scope: ScopeKey) {
   activeScope.value = scope;
@@ -500,7 +526,19 @@ async function loadPage() {
   }
 }
 
-function blankBudgetLine(): ProjectBudgetLineReq { return { subjectId: null, approvedAmount: null }; }
+function buildBudgetLines(existing: ProjectBudgetVO[] = []): EditableBudgetLine[] {
+  const map = new Map<number, number>();
+  for (const line of existing) {
+    if (line.subjectId) map.set(line.subjectId, Number(line.approvedAmount || 0));
+  }
+  return subjectOptions.value.map((item) => ({
+    subjectId: item.id,
+    subjectCode: item.code,
+    subjectName: item.name,
+    approvedAmount: map.get(item.id) ?? null,
+    controlMode: defaultControlMode(map.get(item.id)),
+  }));
+}
 function resetEditForm() {
   editDialog.form.id = undefined;
   editDialog.form.projectCode = '';
@@ -510,15 +548,10 @@ function resetEditForm() {
   editDialog.form.endDate = '';
   editDialog.form.totalBudget = undefined;
   editDialog.form.description = '';
-  editDialog.form.budgetLines = [blankBudgetLine()];
+  editDialog.form.budgetLines = buildBudgetLines();
 }
-function addBudgetLine() { editDialog.form.budgetLines.push(blankBudgetLine()); }
-function removeBudgetLine(index: number) {
-  if (editDialog.form.budgetLines.length === 1) {
-    editDialog.form.budgetLines = [blankBudgetLine()];
-    return;
-  }
-  editDialog.form.budgetLines.splice(index, 1);
+function resetBudgetAmounts() {
+  editDialog.form.budgetLines.forEach((line) => { line.approvedAmount = null; });
 }
 
 function openCreate() {
@@ -541,7 +574,7 @@ async function openEdit(row: ProjectVO) {
   editDialog.form.endDate = detail.endDate || '';
   editDialog.form.totalBudget = detail.totalBudget;
   editDialog.form.description = detail.description || '';
-  editDialog.form.budgetLines = (budgetLines || []).length ? budgetLines.map((item) => ({ subjectId: item.subjectId, approvedAmount: item.approvedAmount })) : [blankBudgetLine()];
+  editDialog.form.budgetLines = buildBudgetLines(budgetLines || []);
 }
 
 async function submitEdit() {
@@ -550,7 +583,13 @@ async function submitEdit() {
     ElMessage.warning('结束日期不能早于开始日期');
     return;
   }
-  const budgetLines = editDialog.form.budgetLines.filter((item) => item.subjectId && Number(item.approvedAmount || 0) > 0);
+  if (Math.abs(allocatedDiff.value) >= 0.005) {
+    ElMessage.warning(`预算分配未完成：分配合计必须等于预算总额（当前差额 ${money(allocatedDiff.value)}）`);
+    return;
+  }
+  const budgetLines = editDialog.form.budgetLines
+    .filter((item) => item.subjectId && Number(item.approvedAmount || 0) > 0)
+    .map((item) => ({ subjectId: item.subjectId, approvedAmount: item.approvedAmount }));
   editDialog.saving = true;
   try {
     const payload = {
@@ -670,7 +709,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-wrap { min-height: 100vh; background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 100%); padding: 20px; }
 .segment-card, .search-card, .table-card { border-radius: 16px; border: none; }
 .segment-card, .search-card, .table-card { margin-top: 16px; }
 .segment-wrap { display: flex; flex-direction: column; gap: 14px; }
@@ -694,6 +732,7 @@ onMounted(async () => {
 .section-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin: 10px 0 12px; }
 .section-title { font-size: 16px; font-weight: 700; color: #0f172a; }
 .section-tip { margin-top: 4px; color:#64748b; font-size:13px; }
+.subject-name-cell { color: #0f172a; font-weight: 500; }
 .budget-summary { display:flex; justify-content:flex-end; gap:22px; margin-top:12px; color:#475569; flex-wrap:wrap; }
 .budget-summary b { color:#0f172a; }
 .budget-ok { color:#16a34a; }
